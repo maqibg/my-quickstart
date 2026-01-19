@@ -8,6 +8,7 @@ import type { AppEntry, Group, LauncherState } from "./types";
 import { createAppEditorModel } from "./appEditorModel";
 import { createAddAppFlow, isUwpPath, UWP_PREFIX } from "./addAppFlow";
 import { createGroupRenameModel } from "./groupRenameModel";
+import { installSearchShortcuts } from "./searchShortcuts";
 import {
   createDefaultState,
   createId,
@@ -397,10 +398,15 @@ export function useLauncherModel() {
   }
 
   let unlistenFns: UnlistenFn[] = [];
+  let uninstallSearchShortcuts: (() => void) | null = null;
 
   onMounted(async () => {
     window.addEventListener("click", closeMenu);
     window.addEventListener("blur", closeMenu);
+    uninstallSearchShortcuts = installSearchShortcuts({
+      search,
+      inputSelector: ".topbar__search",
+    });
 
     try {
       const loaded = await loadState();
@@ -447,6 +453,7 @@ export function useLauncherModel() {
   onUnmounted(() => {
     window.removeEventListener("click", closeMenu);
     window.removeEventListener("blur", closeMenu);
+    if (uninstallSearchShortcuts) uninstallSearchShortcuts();
     if (saveTimer) window.clearTimeout(saveTimer);
     for (const unlisten of unlistenFns) unlisten();
     unlistenFns = [];

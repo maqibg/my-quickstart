@@ -23,7 +23,11 @@ fn get_file_icon_windows(path: &str) -> Result<String, String> {
         BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP,
     };
     use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
-    use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
+    use windows::Win32::System::Com::{CoInitializeEx, CoTaskMemFree, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::{
+        Common::ITEMIDLIST, SHGetFileInfoW, SHParseDisplayName, SHFILEINFOW, SHGFI_ICON,
+        SHGFI_LARGEICON, SHGFI_PIDL,
+    };
     use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, HICON, ICONINFO};
 
     let mut wide: Vec<u16> = path.encode_utf16().collect();
@@ -38,6 +42,36 @@ fn get_file_icon_windows(path: &str) -> Result<String, String> {
             std::mem::size_of::<SHFILEINFOW>() as u32,
             SHGFI_ICON | SHGFI_LARGEICON,
         )
+    };
+    let res = if res == 0 && path.to_ascii_lowercase().starts_with("shell:appsfolder\\") {
+        let _ = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+        let mut pidl: *mut ITEMIDLIST = std::ptr::null_mut();
+        let hr = unsafe {
+            SHParseDisplayName(
+                PCWSTR(wide.as_ptr()),
+                None,
+                &mut pidl,
+                0,
+                None,
+            )
+        };
+        if hr.is_ok() && !pidl.is_null() {
+            let r = unsafe {
+                SHGetFileInfoW(
+                    PCWSTR(pidl as *const _),
+                    FILE_FLAGS_AND_ATTRIBUTES(0),
+                    Some(&mut info),
+                    std::mem::size_of::<SHFILEINFOW>() as u32,
+                    SHGFI_PIDL | SHGFI_ICON | SHGFI_LARGEICON,
+                )
+            };
+            unsafe { CoTaskMemFree(Some(pidl as *const _)) };
+            r
+        } else {
+            0
+        }
+    } else {
+        res
     };
     if res == 0 || info.hIcon == HICON(0) {
         return Err("icon not found".to_string());
@@ -162,4 +196,3 @@ fn get_file_icon_windows(path: &str) -> Result<String, String> {
         base64::engine::general_purpose::STANDARD.encode(png)
     ))
 }
-

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { nextTick, onUnmounted, ref, watch } from "vue";
 import { FONT_FAMILY_OPTIONS } from "../launcher/fonts";
 
 type Props = {
@@ -42,14 +42,80 @@ const fontSize = ref(14);
 const cardFontSize = ref(12);
 const cardIconScale = ref(48);
 const dblclickBlankToHide = ref(true);
+const panelEl = ref<HTMLElement | null>(null);
+const panelX = ref(0);
+const panelY = ref(0);
+const positioned = ref(false);
 
 type SettingsTab = "appearance" | "layout" | "behavior" | "hotkey";
 const tab = ref<SettingsTab>("appearance");
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+async function ensureInitialPosition(): Promise<void> {
+  if (positioned.value) return;
+  await nextTick();
+  const el = panelEl.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const x = clamp(window.innerWidth - rect.width - 14, 8, window.innerWidth - 8);
+  const y = clamp(58, 8, window.innerHeight - rect.height - 8);
+  panelX.value = x;
+  panelY.value = y;
+  positioned.value = true;
+}
+
+let drag:
+  | {
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+    }
+  | null = null;
+
+function onDragMove(ev: MouseEvent): void {
+  if (!drag) return;
+  const el = panelEl.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 8;
+  const maxY = window.innerHeight - rect.height - 8;
+  panelX.value = clamp(drag.originX + (ev.clientX - drag.startX), 8, maxX);
+  panelY.value = clamp(drag.originY + (ev.clientY - drag.startY), 8, maxY);
+}
+
+function stopDrag(): void {
+  drag = null;
+  window.removeEventListener("mousemove", onDragMove);
+  window.removeEventListener("mouseup", stopDrag);
+}
+
+function startDrag(ev: MouseEvent): void {
+  if (ev.button !== 0) return;
+  if (!positioned.value) {
+    void ensureInitialPosition();
+  }
+  drag = {
+    startX: ev.clientX,
+    startY: ev.clientY,
+    originX: panelX.value,
+    originY: panelY.value,
+  };
+  window.addEventListener("mousemove", onDragMove);
+  window.addEventListener("mouseup", stopDrag);
+  ev.preventDefault();
+}
+
+onUnmounted(() => stopDrag());
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return;
+    void ensureInitialPosition();
     tab.value = "appearance";
     cardWidth.value = props.cardWidth;
     cardHeight.value = props.cardHeight;
@@ -137,9 +203,13 @@ function onApplyHotkey(): void {
 </script>
 
 <template>
-  <div v-if="open" class="settingsPanel">
-    <div class="modal__panel">
-      <div class="modal__title">Settings</div>
+  <div
+    v-if="open"
+    class="settingsPanel"
+    :style="{ left: `${panelX}px`, top: `${panelY}px` }"
+  >
+    <div ref="panelEl" class="modal__panel">
+      <div class="modal__title modal__title--draggable" @mousedown="startDrag">Settings</div>
 
       <div class="tabs" role="tablist" aria-label="Settings tabs">
         <button
@@ -320,8 +390,6 @@ function onApplyHotkey(): void {
 <style scoped>
 .settingsPanel {
   position: fixed;
-  top: 58px;
-  right: 14px;
   z-index: 70;
   pointer-events: none;
 }
@@ -329,6 +397,11 @@ function onApplyHotkey(): void {
 .settingsPanel > .modal__panel {
   width: min(420px, calc(100vw - 32px));
   pointer-events: auto;
+}
+
+.modal__title--draggable {
+  cursor: move;
+  user-select: none;
 }
 
 .tabs {

@@ -220,7 +220,7 @@ async function hydrateEntryIcons(entries: AppEntry[]): Promise<void> {
   );
 }
 
-type MenuKind = "blank" | "app" | "group";
+type MenuKind = "blankMain" | "blankSidebar" | "app" | "group";
 const menu = reactive<{
   open: boolean;
   kind: MenuKind;
@@ -229,7 +229,7 @@ const menu = reactive<{
   targetId?: string;
 }>({
   open: false,
-  kind: "blank",
+  kind: "blankMain",
   x: 0,
   y: 0,
   targetId: undefined,
@@ -358,7 +358,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app" @contextmenu="(e) => openMenu('blank', e)">
+  <div class="app">
     <header class="topbar" data-tauri-drag-region @mousedown="startWindowDragging">
       <div class="topbar__drag" data-tauri-drag-region @dblclick="toggleMaximizeWindow()">
         <div class="topbar__title" data-tauri-drag-region>Quick Launcher</div>
@@ -387,7 +387,7 @@ onUnmounted(() => {
     </header>
 
     <div class="content">
-      <aside class="sidebar">
+      <aside class="sidebar" @contextmenu.stop="(e) => openMenu('blankSidebar', e)">
         <div class="sidebar__groups">
           <button
             v-for="g in state.groups"
@@ -402,23 +402,12 @@ onUnmounted(() => {
             <span class="group__name" :title="g.name">{{ g.name }}</span>
           </button>
         </div>
-
-        <button class="sidebar__add" type="button" @click="addGroup()">
-          Add Group
-        </button>
       </aside>
 
       <main class="main">
-        <div class="main__header">
-          <div class="main__title">{{ activeGroup?.name ?? "No group" }}</div>
-          <button class="main__add" type="button" @click="pickAndAddApps()">
-            Add App
-          </button>
-        </div>
-
         <div
           class="grid"
-          @contextmenu.stop="(e) => openMenu('blank', e)"
+          @contextmenu.stop="(e) => openMenu('blankMain', e)"
         >
           <button
             v-for="a in filteredApps"
@@ -458,10 +447,13 @@ onUnmounted(() => {
       @click.stop
       @contextmenu.prevent
     >
-      <template v-if="menu.kind === 'blank'">
+      <template v-if="menu.kind === 'blankMain'">
         <button class="menu__item" type="button" @click="pickAndAddApps().finally(closeMenu)">
           Add App...
         </button>
+      </template>
+
+      <template v-else-if="menu.kind === 'blankSidebar'">
         <button class="menu__item" type="button" @click="addGroup(); closeMenu()">
           Add Group
         </button>
@@ -702,7 +694,7 @@ input {
   flex-direction: column;
   gap: 6px;
   overflow: auto;
-  max-height: calc(100vh - 44px - 70px);
+  max-height: calc(100vh - 44px - 16px);
   padding-right: 4px;
 }
 
@@ -748,21 +740,6 @@ input {
   white-space: nowrap;
 }
 
-.sidebar__add {
-  width: 100%;
-  margin-top: 10px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  cursor: pointer;
-}
-
-.sidebar__add:hover {
-  background: rgba(255, 255, 255, 0.09);
-}
-
 .main {
   min-width: 0;
   flex: 1;
@@ -770,33 +747,6 @@ input {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.main__header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.main__title {
-  font-size: 15px;
-  font-weight: 600;
-  opacity: 0.96;
-}
-
-.main__add {
-  margin-left: auto;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  cursor: pointer;
-}
-
-.main__add:hover {
-  background: rgba(255, 255, 255, 0.09);
 }
 
 .grid {

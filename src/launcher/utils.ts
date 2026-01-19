@@ -22,7 +22,9 @@ export function suggestAppName(filePath: string): string {
 
 export function createDefaultState(): LauncherState {
   const settings: UiSettings = {
-    cardSize: 120,
+    cardWidth: 120,
+    cardHeight: 96,
+    toggleHotkey: "",
   };
   const groups: Group[] = [
     { id: createId(), name: "Group-1", apps: [] },

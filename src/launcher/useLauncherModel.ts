@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { createWindowControls } from "./windowControls";
 
 import { loadState, saveState } from "./storage";
 import type { AppEntry, Group, LauncherState } from "./types";
@@ -50,12 +50,13 @@ export function useLauncherModel() {
   });
 
   const appStyle = computed<Record<string, string>>(() => {
-    const size = clamp(state.settings.cardSize, 90, 200);
-    const height = Math.round(size * 0.8);
-    const icon = Math.round(size * 0.35);
+    const width = clamp(state.settings.cardWidth, 90, 260);
+    const height = clamp(state.settings.cardHeight, 70, 220);
+    const iconBase = Math.min(width, height);
+    const icon = Math.round(iconBase * 0.35);
     const iconImg = Math.round(icon * 0.72);
     return {
-      "--card-min-width": `${size}px`,
+      "--card-min-width": `${width}px`,
       "--card-height": `${height}px`,
       "--card-icon-size": `${icon}px`,
       "--card-icon-img-size": `${iconImg}px`,
@@ -66,7 +67,9 @@ export function useLauncherModel() {
     state.version = loaded.version;
     state.activeGroupId = loaded.activeGroupId;
     state.groups.splice(0, state.groups.length, ...loaded.groups);
-    state.settings.cardSize = loaded.settings.cardSize;
+    state.settings.cardWidth = loaded.settings.cardWidth;
+    state.settings.cardHeight = loaded.settings.cardHeight;
+    state.settings.toggleHotkey = loaded.settings.toggleHotkey;
   }
 
   function showToast(message: string): void {
@@ -75,6 +78,13 @@ export function useLauncherModel() {
       if (toast.value === message) toast.value = null;
     }, 2000);
   }
+
+  const {
+    minimizeWindow,
+    toggleMaximizeWindow,
+    closeWindow,
+    startWindowDragging,
+  } = createWindowControls({ tauriRuntime, showToast });
 
   function scheduleSave(): void {
     if (!hydrated.value) return;
@@ -174,53 +184,6 @@ export function useLauncherModel() {
               })();
       showToast(
         `Failed to open: ${details || "unknown error"}`,
-      );
-    }
-  }
-
-  async function minimizeWindow(): Promise<void> {
-    if (!tauriRuntime) return;
-    try {
-      await getCurrentWindow().minimize();
-    } catch (e) {
-      showToast(
-        `Minimize failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-
-  async function toggleMaximizeWindow(): Promise<void> {
-    if (!tauriRuntime) return;
-    try {
-      await getCurrentWindow().toggleMaximize();
-    } catch (e) {
-      showToast(
-        `Toggle maximize failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-
-  async function closeWindow(): Promise<void> {
-    if (!tauriRuntime) return;
-    try {
-      await getCurrentWindow().close();
-    } catch (e) {
-      showToast(
-        `Close failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-
-  async function startWindowDragging(ev: MouseEvent): Promise<void> {
-    if (!tauriRuntime) return;
-    if (ev.button !== 0) return;
-    const target = ev.target as HTMLElement | null;
-    if (target?.closest("input, button, textarea, select, a")) return;
-    try {
-      await getCurrentWindow().startDragging();
-    } catch (e) {
-      showToast(
-        `Drag failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }
@@ -396,9 +359,32 @@ export function useLauncherModel() {
     settingsOpen.value = false;
   }
 
-  function updateCardSize(value: number): void {
-    state.settings.cardSize = clamp(Math.round(value), 90, 200);
+  function updateCardWidth(value: number): void {
+    state.settings.cardWidth = clamp(Math.round(value), 90, 260);
     scheduleSave();
+  }
+
+  function updateCardHeight(value: number): void {
+    state.settings.cardHeight = clamp(Math.round(value), 70, 220);
+    scheduleSave();
+  }
+
+  async function applyToggleHotkey(value: string): Promise<void> {
+    if (!tauriRuntime) {
+      showToast("This action requires the Tauri runtime");
+      return;
+    }
+    const normalized = value.trim().toLowerCase();
+    try {
+      await invoke("set_toggle_hotkey", { hotkey: normalized });
+      state.settings.toggleHotkey = normalized;
+      scheduleSave();
+      showToast("Hotkey updated");
+    } catch (e) {
+      showToast(
+        `Hotkey failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   let unlistenFns: UnlistenFn[] = [];
@@ -491,7 +477,8 @@ export function useLauncherModel() {
     applyEditorUpdate,
     openSettings,
     closeSettings,
-    updateCardSize,
+    updateCardWidth,
+    updateCardHeight,
+    applyToggleHotkey,
   };
 }
-

@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf};
 use tauri::Manager;
 
+mod icon;
+mod hotkey;
 mod tray;
+mod window_utils;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -54,14 +57,24 @@ fn default_card_size() -> u32 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct UiSettings {
-    #[serde(rename = "cardSize", default = "default_card_size")]
-    card_size: u32,
+    #[serde(rename = "cardWidth", alias = "cardSize", default = "default_card_size")]
+    card_width: u32,
+    #[serde(rename = "cardHeight", default = "default_card_height")]
+    card_height: u32,
+    #[serde(rename = "toggleHotkey", default)]
+    toggle_hotkey: String,
+}
+
+fn default_card_height() -> u32 {
+    96
 }
 
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
-            card_size: default_card_size(),
+            card_width: default_card_size(),
+            card_height: default_card_height(),
+            toggle_hotkey: String::new(),
         }
     }
 }
@@ -232,18 +245,7 @@ fn load_launcher_state(app: tauri::AppHandle) -> Result<Option<LauncherState>, S
             .unwrap_or_else(String::new)
     };
 
-    let settings_raw: String = conn
-        .query_row(
-            "SELECT value FROM meta WHERE key = 'ui_settings' LIMIT 1",
-            [],
-            |r| r.get(0),
-        )
-        .unwrap_or_else(|_| String::new());
-    let settings = if settings_raw.trim().is_empty() {
-        UiSettings::default()
-    } else {
-        serde_json::from_str::<UiSettings>(&settings_raw).unwrap_or_else(|_| UiSettings::default())
-    };
+    let settings = load_ui_settings(&conn);
 
     Ok(Some(LauncherState {
         version: 1,
@@ -306,161 +308,34 @@ fn save_launcher_state(app: tauri::AppHandle, state: LauncherState) -> Result<()
     tx.commit().map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-fn get_file_icon(path: String) -> Result<Option<String>, String> {
-    #[cfg(target_os = "windows")]
-    {
-        return get_file_icon_windows(&path).map(Some).or(Ok(None));
+fn load_ui_settings(conn: &Connection) -> UiSettings {
+    let settings_raw: String = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'ui_settings' LIMIT 1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or_else(|_| String::new());
+    if settings_raw.trim().is_empty() {
+        return UiSettings::default();
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = path;
-        Ok(None)
-    }
+    serde_json::from_str::<UiSettings>(&settings_raw).unwrap_or_else(|_| UiSettings::default())
 }
 
-#[cfg(target_os = "windows")]
-fn get_file_icon_windows(path: &str) -> Result<String, String> {
-    use base64::Engine;
-    use image::codecs::png::PngEncoder;
-    use image::ColorType;
-    use image::ImageEncoder;
-    use windows::core::PCWSTR;
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::Graphics::Gdi::{
-        DeleteObject, GetDC, GetDIBits, GetObjectW, ReleaseDC, BITMAP, BITMAPINFO, BITMAPINFOHEADER,
-        BI_RGB, DIB_RGB_COLORS, HBITMAP,
-    };
-    use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
-    use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
-    use windows::Win32::UI::WindowsAndMessaging::{
-        DestroyIcon, GetIconInfo, HICON, ICONINFO,
-    };
+fn load_saved_hotkey(app: &tauri::AppHandle) -> Option<String> {
+    let conn = open_db(app).ok()?;
+    let settings = load_ui_settings(&conn);
+    let v = settings.toggle_hotkey.trim().to_string();
+    if v.is_empty() { None } else { Some(v) }
+}
 
-    let mut wide: Vec<u16> = path.encode_utf16().collect();
-    wide.push(0);
-
-    let mut info = SHFILEINFOW::default();
-    let res = unsafe {
-        SHGetFileInfoW(
-            PCWSTR(wide.as_ptr()),
-            FILE_FLAGS_AND_ATTRIBUTES(0),
-            Some(&mut info),
-            std::mem::size_of::<SHFILEINFOW>() as u32,
-            SHGFI_ICON | SHGFI_LARGEICON,
-        )
-    };
-    if res == 0 || info.hIcon == HICON(0) {
-        return Err("icon not found".to_string());
-    }
-
-    let hicon = info.hIcon;
-    let mut icon_info = ICONINFO::default();
-    unsafe { GetIconInfo(hicon, &mut icon_info).map_err(|e| e.to_string())? };
-
-    let color = icon_info.hbmColor;
-    if color == HBITMAP(0) {
-        unsafe {
-            if icon_info.hbmMask != HBITMAP(0) {
-                let _ = DeleteObject(icon_info.hbmMask);
-            }
-            let _ = DestroyIcon(hicon);
-        }
-        return Err("no color bitmap".to_string());
-    }
-
-    let mut bm = BITMAP::default();
-    let got = unsafe { GetObjectW(color, std::mem::size_of::<BITMAP>() as i32, Some(&mut bm as *mut _ as *mut _)) };
-    if got == 0 {
-        unsafe {
-            let _ = DeleteObject(color);
-            if icon_info.hbmMask != HBITMAP(0) {
-                let _ = DeleteObject(icon_info.hbmMask);
-            }
-            let _ = DestroyIcon(hicon);
-        }
-        return Err("GetObjectW failed".to_string());
-    }
-
-    let width = bm.bmWidth.max(0) as i32;
-    let height = bm.bmHeight.max(0) as i32;
-    if width == 0 || height == 0 {
-        unsafe {
-            let _ = DeleteObject(color);
-            if icon_info.hbmMask != HBITMAP(0) {
-                let _ = DeleteObject(icon_info.hbmMask);
-            }
-            let _ = DestroyIcon(hicon);
-        }
-        return Err("invalid bitmap size".to_string());
-    }
-
-    let mut bmi = BITMAPINFO {
-        bmiHeader: BITMAPINFOHEADER {
-            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-            biWidth: width,
-            biHeight: -height,
-            biPlanes: 1,
-            biBitCount: 32,
-            biCompression: BI_RGB.0 as u32,
-            biSizeImage: (width * height * 4) as u32,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let mut bgra = vec![0u8; (width * height * 4) as usize];
-    let hdc = unsafe { GetDC(HWND(0)) };
-    let scan_lines = unsafe {
-        GetDIBits(
-            hdc,
-            color,
-            0,
-            height as u32,
-            Some(bgra.as_mut_ptr() as *mut _),
-            &mut bmi,
-            DIB_RGB_COLORS,
-        )
-    };
-    unsafe { ReleaseDC(HWND(0), hdc) };
-
-    if scan_lines == 0 {
-        unsafe {
-            let _ = DeleteObject(color);
-            if icon_info.hbmMask != HBITMAP(0) {
-                let _ = DeleteObject(icon_info.hbmMask);
-            }
-            let _ = DestroyIcon(hicon);
-        }
-        return Err("GetDIBits failed".to_string());
-    }
-
-    let mut rgba = bgra;
-    for px in rgba.chunks_exact_mut(4) {
-        let b = px[0];
-        let r = px[2];
-        px[0] = r;
-        px[2] = b;
-    }
-
-    unsafe {
-        let _ = DeleteObject(color);
-        if icon_info.hbmMask != HBITMAP(0) {
-            let _ = DeleteObject(icon_info.hbmMask);
-        }
-        let _ = DestroyIcon(hicon);
-    }
-
-    let mut png = Vec::new();
-    let encoder = PngEncoder::new(&mut png);
-    encoder
-        .write_image(&rgba, width as u32, height as u32, ColorType::Rgba8.into())
-        .map_err(|e| e.to_string())?;
-
-    Ok(format!(
-        "data:image/png;base64,{}",
-        base64::engine::general_purpose::STANDARD.encode(png)
-    ))
+#[tauri::command]
+fn set_toggle_hotkey(
+    app: tauri::AppHandle,
+    hotkey_state: tauri::State<'_, hotkey::HotkeyState>,
+    hotkey: String,
+) -> Result<(), String> {
+    hotkey::apply_hotkey(&app, &hotkey_state, hotkey)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -470,6 +345,19 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 tray::setup_tray(&app.handle())?;
+                app.manage(hotkey::HotkeyState(std::sync::Mutex::new(None)));
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_handler(|app, _shortcut, event| {
+                            hotkey::handle_shortcut_event(app, event.state);
+                        })
+                        .build(),
+                )?;
+
+                let saved = load_saved_hotkey(&app.handle());
+                if let Some(state) = app.try_state::<hotkey::HotkeyState>() {
+                    hotkey::init_from_saved_hotkey(&app.handle(), &state, saved);
+                }
             }
             Ok(())
         })
@@ -484,7 +372,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             spawn_app,
-            get_file_icon,
+            icon::get_file_icon,
+            set_toggle_hotkey,
             load_launcher_state,
             save_launcher_state
         ])

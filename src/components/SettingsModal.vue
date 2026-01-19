@@ -3,33 +3,53 @@ import { ref, watch } from "vue";
 
 type Props = {
   open: boolean;
-  cardSize: number;
+  cardWidth: number;
+  cardHeight: number;
+  toggleHotkey: string;
 };
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "updateCardSize", value: number): void;
+  (e: "updateCardWidth", value: number): void;
+  (e: "updateCardHeight", value: number): void;
+  (e: "applyHotkey", value: string): void;
 }>();
 
-const cardSize = ref(120);
+const cardWidth = ref(120);
+const cardHeight = ref(96);
+const toggleHotkey = ref("");
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return;
-    cardSize.value = props.cardSize;
+    cardWidth.value = props.cardWidth;
+    cardHeight.value = props.cardHeight;
+    toggleHotkey.value = props.toggleHotkey;
   },
   { immediate: true },
 );
 
-function onInput(ev: Event): void {
+function onWidthInput(ev: Event): void {
   const raw = (ev.target as HTMLInputElement).value;
   const next = Number(raw);
   if (!Number.isFinite(next)) return;
-  cardSize.value = next;
-  emit("updateCardSize", next);
+  cardWidth.value = next;
+  emit("updateCardWidth", next);
+}
+
+function onHeightInput(ev: Event): void {
+  const raw = (ev.target as HTMLInputElement).value;
+  const next = Number(raw);
+  if (!Number.isFinite(next)) return;
+  cardHeight.value = next;
+  emit("updateCardHeight", next);
+}
+
+function onApplyHotkey(): void {
+  emit("applyHotkey", toggleHotkey.value);
 }
 </script>
 
@@ -39,23 +59,49 @@ function onInput(ev: Event): void {
       <div class="modal__title">Settings</div>
 
       <label class="field">
-        <div class="field__label">Card size</div>
+        <div class="field__label">Card width</div>
         <input
           class="field__input field__input--range"
           type="range"
           min="90"
-          max="200"
+          max="260"
           step="2"
-          :value="cardSize"
-          @input="onInput"
+          :value="cardWidth"
+          @input="onWidthInput"
         />
-        <div class="field__hint">{{ cardSize }}px</div>
+        <div class="field__hint">{{ cardWidth }}px</div>
+      </label>
+
+      <label class="field">
+        <div class="field__label">Card height</div>
+        <input
+          class="field__input field__input--range"
+          type="range"
+          min="70"
+          max="220"
+          step="2"
+          :value="cardHeight"
+          @input="onHeightInput"
+        />
+        <div class="field__hint">{{ cardHeight }}px</div>
+      </label>
+
+      <label class="field">
+        <div class="field__label">Toggle hotkey</div>
+        <input
+          v-model="toggleHotkey"
+          class="field__input"
+          placeholder="e.g. ctrl+alt+space"
+        />
+        <div class="field__hint">
+          Example: <code>ctrl+alt+space</code> / <code>alt+space</code> / <code>ctrl+d</code>
+        </div>
       </label>
 
       <div class="modal__actions">
+        <button class="btn" type="button" @click="onApplyHotkey">Apply Hotkey</button>
         <button class="btn btn--primary" type="button" @click="emit('close')">Close</button>
       </div>
     </div>
   </div>
 </template>
-

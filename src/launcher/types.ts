@@ -14,7 +14,9 @@ export type Group = {
 };
 
 export type UiSettings = {
-  cardSize: number;
+  cardWidth: number;
+  cardHeight: number;
+  toggleHotkey: string;
 };
 
 export type LauncherState = {

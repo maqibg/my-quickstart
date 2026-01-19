@@ -16,7 +16,9 @@ function isValidState(value: unknown): value is LauncherState {
   if (!Array.isArray(v.groups)) return false;
   if (!v.settings || typeof v.settings !== "object") return false;
   const settings = v.settings as any;
-  if (typeof settings.cardSize !== "number") return false;
+  if (typeof settings.cardWidth !== "number") return false;
+  if (typeof settings.cardHeight !== "number") return false;
+  if (typeof settings.toggleHotkey !== "string") return false;
   return v.groups.every((g) => {
     if (!g || typeof g !== "object") return false;
     const group = g as any;

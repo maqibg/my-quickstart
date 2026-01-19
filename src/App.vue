@@ -37,7 +37,9 @@ const {
   applyEditorUpdate,
   openSettings,
   closeSettings,
-  updateCardSize,
+  updateCardWidth,
+  updateCardHeight,
+  applyToggleHotkey,
 } = useLauncherModel();
 
 function onSidebarBlank(ev: MouseEvent): void {
@@ -52,9 +54,9 @@ function onGridBlank(ev: MouseEvent): void {
   openMenu("blankMain", ev);
 }
 
- function onGridApp(ev: MouseEvent, id: string): void {
-   openMenu("app", ev, id);
- }
+function onGridApp(ev: MouseEvent, id: string): void {
+  openMenu("app", ev, id);
+}
 </script>
 
 <template>
@@ -119,9 +121,13 @@ function onGridBlank(ev: MouseEvent): void {
 
     <SettingsModal
       :open="settingsOpen"
-      :card-size="state.settings.cardSize"
+      :card-width="state.settings.cardWidth"
+      :card-height="state.settings.cardHeight"
+      :toggle-hotkey="state.settings.toggleHotkey"
       @close="closeSettings"
-      @update-card-size="updateCardSize"
+      @update-card-width="updateCardWidth"
+      @update-card-height="updateCardHeight"
+      @apply-hotkey="applyToggleHotkey"
     />
   </div>
 </template>

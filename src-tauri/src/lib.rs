@@ -56,20 +56,17 @@ struct AppEntry {
     id: String,
     name: String,
     path: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     args: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     icon: Option<String>,
     #[serde(rename = "addedAt")]
     added_at: i64,
 }
 
 fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let base_dir = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| e.to_string())?;
-    Ok(base_dir.join("launcher.db"))
+    let base_dir = app.path().local_data_dir().map_err(|e| e.to_string())?;
+    Ok(base_dir.join("my-quickstart").join("launcher.db"))
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {

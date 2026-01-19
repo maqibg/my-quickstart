@@ -27,6 +27,7 @@ const dragActive = ref(false);
 const toast = ref<string | null>(null);
 const hydrated = ref(false);
 let saveTimer: number | null = null;
+let saveErrorShown = false;
 
 const activeGroup = computed<Group | undefined>(() =>
   state.groups.find((g) => g.id === state.activeGroupId),
@@ -61,8 +62,12 @@ function scheduleSave(): void {
   saveTimer = window.setTimeout(() => {
     saveTimer = null;
     const plain = JSON.parse(JSON.stringify(state)) as LauncherState;
-    saveState(plain).catch(() => {
-      // ignore
+    saveState(plain).catch((e) => {
+      if (saveErrorShown) return;
+      saveErrorShown = true;
+      showToast(
+        `Save failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     });
   }, 250);
 }
@@ -87,12 +92,14 @@ function addGroup(name?: string): void {
   const group: Group = { id: createId(), name: nextName, apps: [] };
   state.groups.push(group);
   state.activeGroupId = group.id;
+  scheduleSave();
 }
 
 function renameGroup(group: Group): void {
   const next = window.prompt("Group name", group.name);
   if (!next) return;
   group.name = next.trim() || group.name;
+  scheduleSave();
 }
 
 function removeGroup(group: Group): void {
@@ -102,6 +109,7 @@ function removeGroup(group: Group): void {
   if (state.activeGroupId === group.id) {
     state.activeGroupId = state.groups[0]?.id ?? state.activeGroupId;
   }
+  scheduleSave();
 }
 
 function addPathsToActiveGroup(paths: string[]): void {
@@ -111,6 +119,7 @@ function addPathsToActiveGroup(paths: string[]): void {
   if (added.length > 0) {
     showToast(`Added ${added.length} item(s)`);
     hydrateEntryIcons(added);
+    scheduleSave();
   }
 }
 
@@ -257,6 +266,7 @@ function removeApp(entry: AppEntry): void {
   if (!group) return;
   const idx = group.apps.findIndex((a) => a.id === entry.id);
   if (idx >= 0) group.apps.splice(idx, 1);
+  scheduleSave();
 }
 
 const editor = reactive<{
@@ -302,6 +312,7 @@ function saveEditor(): void {
   }
   entry.args = editor.args;
   closeEditor();
+  scheduleSave();
 }
 
 let unlistenFns: UnlistenFn[] = [];
@@ -313,6 +324,10 @@ onMounted(async () => {
   try {
     const loaded = await loadState();
     applyLoadedState(loaded);
+  } catch (e) {
+    showToast(
+      `Load failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
   } finally {
     hydrated.value = true;
   }

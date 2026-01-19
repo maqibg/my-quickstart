@@ -26,8 +26,8 @@ function isValidState(value: unknown): value is LauncherState {
         typeof a.id === "string" &&
         typeof a.name === "string" &&
         typeof a.path === "string" &&
-        (typeof a.args === "undefined" || typeof a.args === "string") &&
-        (typeof a.icon === "undefined" || typeof a.icon === "string") &&
+        (typeof a.args === "undefined" || typeof a.args === "string" || a.args === null) &&
+        (typeof a.icon === "undefined" || typeof a.icon === "string" || a.icon === null) &&
         typeof a.addedAt === "number"
       );
     });
@@ -52,7 +52,7 @@ function loadLegacyState(): LauncherState | null {
 export async function loadState(): Promise<LauncherState> {
   if (!isTauriRuntime()) return createDefaultState();
 
-  const fromDb = (await invoke("load_launcher_state")) as LauncherState | null;
+  const fromDb = (await invoke("load_launcher_state")) as unknown;
   if (fromDb && isValidState(fromDb)) return fromDb;
 
   const legacy = loadLegacyState();
@@ -67,10 +67,12 @@ export async function loadState(): Promise<LauncherState> {
   }
 
   const initial = createDefaultState();
-  try {
-    await invoke("save_launcher_state", { state: initial });
-  } catch {
-    // ignore
+  if (!fromDb) {
+    try {
+      await invoke("save_launcher_state", { state: initial });
+    } catch {
+      // ignore
+    }
   }
   return initial;
 }

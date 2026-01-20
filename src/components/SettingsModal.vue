@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { FONT_FAMILY_OPTIONS } from "../launcher/fonts";
 
 type Props = {
@@ -49,6 +49,10 @@ const panelEl = ref<HTMLElement | null>(null);
 const panelX = ref(0);
 const panelY = ref(0);
 const positioned = ref(false);
+const viewportH = ref(typeof window !== "undefined" ? window.innerHeight : 800);
+
+const MIN_PANEL_HEIGHT = 260;
+const EDGE_PAD = 16;
 
 type SettingsTab = "appearance" | "layout" | "behavior" | "hotkey";
 const tab = ref<SettingsTab>("appearance");
@@ -57,6 +61,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+const panelMaxHeight = computed(() => {
+  return Math.max(0, viewportH.value - panelY.value - EDGE_PAD);
+});
+
 async function ensureInitialPosition(): Promise<void> {
   if (positioned.value) return;
   await nextTick();
@@ -64,7 +72,7 @@ async function ensureInitialPosition(): Promise<void> {
   if (!el) return;
   const rect = el.getBoundingClientRect();
   const x = clamp(window.innerWidth - rect.width - 14, 8, window.innerWidth - 8);
-  const y = clamp(58, 8, window.innerHeight - rect.height - 8);
+  const y = clamp(58, 8, window.innerHeight - MIN_PANEL_HEIGHT - EDGE_PAD);
   panelX.value = x;
   panelY.value = y;
   positioned.value = true;
@@ -85,7 +93,7 @@ function onDragMove(ev: MouseEvent): void {
   if (!el) return;
   const rect = el.getBoundingClientRect();
   const maxX = window.innerWidth - rect.width - 8;
-  const maxY = window.innerHeight - rect.height - 8;
+  const maxY = window.innerHeight - MIN_PANEL_HEIGHT - EDGE_PAD;
   panelX.value = clamp(drag.originX + (ev.clientX - drag.startX), 8, maxX);
   panelY.value = clamp(drag.originY + (ev.clientY - drag.startY), 8, maxY);
 }
@@ -113,6 +121,18 @@ function startDrag(ev: MouseEvent): void {
 }
 
 onUnmounted(() => stopDrag());
+
+function onResize(): void {
+  viewportH.value = window.innerHeight;
+}
+
+onMounted(() => {
+  window.addEventListener("resize", onResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize);
+});
 
 watch(
   () => props.open,
@@ -218,7 +238,7 @@ function onApplyHotkey(): void {
     class="settingsPanel"
     :style="{ left: `${panelX}px`, top: `${panelY}px` }"
   >
-    <div ref="panelEl" class="modal__panel">
+    <div ref="panelEl" class="modal__panel" :style="{ maxHeight: `${panelMaxHeight}px` }">
       <div class="modal__title modal__title--draggable" @mousedown="startDrag">Settings</div>
 
       <div class="tabs" role="tablist" aria-label="Settings tabs">
@@ -417,6 +437,7 @@ function onApplyHotkey(): void {
 .settingsPanel > .modal__panel {
   width: min(420px, calc(100vw - 32px));
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .modal__title--draggable {

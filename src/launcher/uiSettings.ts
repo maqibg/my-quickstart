@@ -60,6 +60,9 @@ export function applyLoadedUiSettings(target: UiSettings, loaded: UiSettings): v
 
   const maybeDblClick = (loaded as any).dblClickBlankToHide;
   if (typeof maybeDblClick === "boolean") target.dblClickBlankToHide = maybeDblClick;
+
+  const maybeAlwaysOnTop = (loaded as any).alwaysOnTop;
+  if (typeof maybeAlwaysOnTop === "boolean") target.alwaysOnTop = maybeAlwaysOnTop;
 }
 
 export function computeAppStyle(settings: UiSettings): Record<string, string> {

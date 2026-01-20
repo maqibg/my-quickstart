@@ -14,6 +14,7 @@ type Props = {
   cardFontSize: number;
   cardIconScale: number;
   dblclickBlankToHide: boolean;
+  alwaysOnTop: boolean;
 };
 
 const props = defineProps<Props>();
@@ -30,6 +31,7 @@ const emit = defineEmits<{
   (e: "updateCardFontSize", value: number): void;
   (e: "updateCardIconScale", value: number): void;
   (e: "updateDblclickBlankToHide", value: boolean): void;
+  (e: "updateAlwaysOnTop", value: boolean): void;
 }>();
 
 const cardWidth = ref(120);
@@ -42,6 +44,7 @@ const fontSize = ref(14);
 const cardFontSize = ref(12);
 const cardIconScale = ref(48);
 const dblclickBlankToHide = ref(true);
+const alwaysOnTop = ref(true);
 const panelEl = ref<HTMLElement | null>(null);
 const panelX = ref(0);
 const panelY = ref(0);
@@ -127,6 +130,7 @@ watch(
     cardFontSize.value = props.cardFontSize;
     cardIconScale.value = props.cardIconScale;
     dblclickBlankToHide.value = props.dblclickBlankToHide;
+    alwaysOnTop.value = props.alwaysOnTop;
   },
   { immediate: true },
 );
@@ -195,6 +199,12 @@ function onDblclickChange(ev: Event): void {
   const next = (ev.target as HTMLInputElement).checked;
   dblclickBlankToHide.value = next;
   emit("updateDblclickBlankToHide", next);
+}
+
+function onAlwaysOnTopChange(ev: Event): void {
+  const next = (ev.target as HTMLInputElement).checked;
+  alwaysOnTop.value = next;
+  emit("updateAlwaysOnTop", next);
 }
 
 function onApplyHotkey(): void {
@@ -360,6 +370,16 @@ function onApplyHotkey(): void {
             @change="onDblclickChange"
           />
           <span class="check__label">Double click blank area to hide window</span>
+        </label>
+
+        <label class="check">
+          <input
+            class="check__input"
+            type="checkbox"
+            :checked="alwaysOnTop"
+            @change="onAlwaysOnTopChange"
+          />
+          <span class="check__label">Always on top</span>
         </label>
       </template>
 

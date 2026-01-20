@@ -32,6 +32,7 @@ export function createDefaultState(): LauncherState {
     cardFontSize: 11,
     cardIconScale: 56,
     dblClickBlankToHide: true,
+    alwaysOnTop: true,
   };
   const groups: Group[] = [
     { id: createId(), name: "Group-1", apps: [] },

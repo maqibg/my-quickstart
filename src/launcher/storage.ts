@@ -114,6 +114,9 @@ function coerceLauncherState(value: unknown): LauncherState | null {
   if (typeof rawSettings.dblClickBlankToHide === "boolean") {
     settings.dblClickBlankToHide = rawSettings.dblClickBlankToHide;
   }
+  if (typeof rawSettings.alwaysOnTop === "boolean") {
+    settings.alwaysOnTop = rawSettings.alwaysOnTop;
+  }
 
   const activeGroupId =
     typeof raw.activeGroupId === "string" &&

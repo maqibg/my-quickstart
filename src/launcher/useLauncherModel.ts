@@ -81,6 +81,7 @@ export function useLauncherModel() {
     toggleMaximizeWindow,
     closeWindow,
     startWindowDragging,
+    setAlwaysOnTop,
   } = createWindowControls({ tauriRuntime, showToast });
 
   function scheduleSave(): void {
@@ -297,7 +298,6 @@ export function useLauncherModel() {
     scheduleSave,
     showToast,
   });
-
   const externalPreview = createExternalFileDropPreview({
     getActiveGroup: () => activeGroup.value,
   });
@@ -374,6 +374,12 @@ export function useLauncherModel() {
     scheduleSave();
   }
 
+  function updateAlwaysOnTop(value: boolean): void {
+    state.settings.alwaysOnTop = value;
+    void setAlwaysOnTop(value);
+    scheduleSave();
+  }
+
   function onMainBlankDoubleClick(): void {
     if (!state.settings.dblClickBlankToHide) return;
     closeWindow();
@@ -432,10 +438,7 @@ export function useLauncherModel() {
   onMounted(async () => {
     window.addEventListener("click", closeMenu);
     window.addEventListener("blur", closeMenu);
-    uninstallSearchShortcuts = installSearchShortcuts({
-      search,
-      inputSelector: ".topbar__search",
-    });
+    uninstallSearchShortcuts = installSearchShortcuts({ search, inputSelector: ".topbar__search" });
 
     try {
       const loaded = await loadState();
@@ -449,6 +452,7 @@ export function useLauncherModel() {
     }
 
     hydrateEntryIcons(activeGroup.value?.apps ?? []);
+    void setAlwaysOnTop(state.settings.alwaysOnTop);
 
     if (!isTauriRuntime()) return;
     unlistenFns = await installTauriFileDropListeners({
@@ -484,7 +488,7 @@ export function useLauncherModel() {
     closeEditor, applyEditorUpdate, openSettings, closeSettings,
     updateCardWidth, updateCardHeight, updateSidebarWidth, updateFontFamily, updateFontSize,
     updateCardFontSize, updateCardIconScale, updateTheme, updateDblClickBlankToHide,
-    applyToggleHotkey, onMainBlankDoubleClick,
+    updateAlwaysOnTop, applyToggleHotkey, onMainBlankDoubleClick,
     openRenameGroup: openRename, closeRenameGroup: closeRename, saveRenameGroup: saveRename,
     draggingAppId, dropBeforeAppId, dropEnd, dropTargetGroupId,
     onMouseDownApp: internalDrag.onMouseDownApp,

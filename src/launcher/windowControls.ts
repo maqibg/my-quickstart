@@ -55,11 +55,22 @@ export function createWindowControls(options: Options) {
     }
   }
 
+  async function setAlwaysOnTop(value: boolean): Promise<void> {
+    if (!tauriRuntime) return;
+    try {
+      await getCurrentWindow().setAlwaysOnTop(value);
+    } catch (e) {
+      showToast(
+        `Always on top failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
   return {
     minimizeWindow,
     toggleMaximizeWindow,
     closeWindow,
     startWindowDragging,
+    setAlwaysOnTop,
   };
 }
-

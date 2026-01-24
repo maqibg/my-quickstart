@@ -43,6 +43,86 @@ fn spawn_app(path: String, args: Vec<String>) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn open_app_folder(path: String) -> Result<(), String> {
+    let mut raw = path.trim().to_string();
+    if raw.starts_with('\"') && raw.ends_with('\"') && raw.len() >= 2 {
+        raw = raw[1..raw.len() - 1].to_string();
+    }
+    if raw.starts_with('\'') && raw.ends_with('\'') && raw.len() >= 2 {
+        raw = raw[1..raw.len() - 1].to_string();
+    }
+    if raw.trim().is_empty() {
+        return Err("path is empty".to_string());
+    }
+    if is_special_path(&raw) {
+        return Err("path has no folder".to_string());
+    }
+    let resolved = resolve_launch_path(&raw);
+    let p = Path::new(&resolved);
+    if p.exists() && p.is_dir() {
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer")
+                .arg(resolved)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            std::process::Command::new(resolved)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+    }
+    if p.exists() {
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer")
+                .arg("/select,")
+                .arg(p.to_string_lossy().to_string())
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let parent = p.parent().unwrap_or(p);
+            std::process::Command::new(parent.to_string_lossy().to_string())
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+    }
+    if let Some(parent) = p.parent() {
+        #[cfg(target_os = "windows")]
+        {
+            let arg = parent.to_string_lossy().to_string();
+            std::process::Command::new("explorer")
+                .arg(arg)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            std::process::Command::new(parent.to_string_lossy().to_string())
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+    }
+    Err("parent folder not found".to_string())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LauncherState {
     version: u8,
@@ -577,6 +657,7 @@ pub fn run() {
             icon::get_file_icon,
             set_toggle_hotkey,
             make_relative_path,
+            open_app_folder,
             load_launcher_state,
             save_launcher_state
         ])

@@ -15,6 +15,7 @@ const emit = defineEmits<{
   (e: "addUwpApp"): void;
   (e: "addGroup"): void;
   (e: "openApp"): void;
+  (e: "openAppFolder"): void;
   (e: "editApp"): void;
   (e: "removeApp"): void;
   (e: "renameGroup"): void;
@@ -42,6 +43,9 @@ const emit = defineEmits<{
 
     <template v-else-if="kind === 'app'">
       <button class="menu__item" type="button" @click="emit('openApp')">Open</button>
+      <button class="menu__item" type="button" @click="emit('openAppFolder')">
+        Open Folder
+      </button>
       <button class="menu__item" type="button" @click="emit('editApp')">Edit</button>
       <button class="menu__item menu__item--danger" type="button" @click="emit('removeApp')">
         Remove

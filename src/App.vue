@@ -33,6 +33,7 @@ const {
   menuAddUwpApp,
   menuAddGroup,
   menuOpenApp,
+  menuOpenAppFolder,
   menuEditApp,
   menuRemoveApp,
   menuRenameGroup,
@@ -140,10 +141,11 @@ function onGridBlankDblClick(): void {
       :x="menu.x"
       :y="menu.y"
       @add-app="menuAddApp"
-      @add-uwp-app="menuAddUwpApp"
-      @add-group="menuAddGroup"
-      @open-app="menuOpenApp"
-      @edit-app="menuEditApp"
+    @add-uwp-app="menuAddUwpApp"
+    @add-group="menuAddGroup"
+    @open-app="menuOpenApp"
+    @open-app-folder="menuOpenAppFolder"
+    @edit-app="menuEditApp"
       @remove-app="menuRemoveApp"
       @rename-group="menuRenameGroup"
       @remove-group="menuRemoveGroup"

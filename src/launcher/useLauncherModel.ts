@@ -282,6 +282,25 @@ export function useLauncherModel() {
     closeMenu();
   }
 
+  async function menuOpenAppFolder(): Promise<void> {
+    const entry = getMenuApp();
+    if (!entry) return;
+    if (!tauriRuntime) {
+      showToast("This action requires the Tauri runtime");
+      closeMenu();
+      return;
+    }
+    try {
+      await invoke("open_app_folder", { path: entry.path });
+    } catch (e) {
+      showToast(
+        `Open folder failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      closeMenu();
+    }
+  }
+
   function menuEditApp(): void {
     const entry = getMenuApp();
     if (entry) openEditor(entry);
@@ -519,7 +538,7 @@ export function useLauncherModel() {
     settingsOpen, addAppOpen, appStyle, filteredApps,
     menu, editor, rename, setActiveGroup, launch,
     openMenu, closeMenu, menuAddApp, menuAddUwpApp, menuAddGroup,
-    menuOpenApp, menuEditApp, menuRemoveApp, menuRenameGroup, menuRemoveGroup,
+    menuOpenApp, menuOpenAppFolder, menuEditApp, menuRemoveApp, menuRenameGroup, menuRemoveGroup,
     pickAndAddApps, openAddApp, closeAddApp, addUwpToActiveGroup,
     addGroup, removeGroup,
     minimizeWindow, toggleMaximizeWindow, closeWindow, startWindowDragging,

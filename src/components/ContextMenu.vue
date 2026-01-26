@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+
 export type MenuKind = "blankMain" | "blankSidebar" | "app" | "group";
 
 type Props = {
@@ -8,7 +10,56 @@ type Props = {
   y: number;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+const menuRef = ref<HTMLDivElement | null>(null);
+const position = reactive({ left: 0, top: 0 });
+
+function clampMenuPosition(): void {
+  const el = menuRef.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const padding = 8;
+  const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
+  const maxTop = Math.max(padding, window.innerHeight - rect.height - padding);
+  const nextLeft = Math.min(Math.max(position.left, padding), maxLeft);
+  const nextTop = Math.min(Math.max(position.top, padding), maxTop);
+  if (nextLeft !== position.left || nextTop !== position.top) {
+    position.left = nextLeft;
+    position.top = nextTop;
+  }
+}
+
+function syncMenuPosition(): void {
+  position.left = props.x;
+  position.top = props.y;
+  void nextTick(() => {
+    if (!props.open) return;
+    clampMenuPosition();
+  });
+}
+
+watch(
+  () => [props.open, props.x, props.y, props.kind],
+  () => {
+    if (!props.open) return;
+    syncMenuPosition();
+  },
+  { immediate: true },
+);
+
+function onResize(): void {
+  if (!props.open) return;
+  clampMenuPosition();
+}
+
+onMounted(() => {
+  window.addEventListener("resize", onResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize);
+});
 
 const emit = defineEmits<{
   (e: "addApp"): void;
@@ -27,8 +78,9 @@ const emit = defineEmits<{
 <template>
   <div
     v-if="open"
+    ref="menuRef"
     class="menu"
-    :style="{ left: `${x}px`, top: `${y}px` }"
+    :style="{ left: `${position.left}px`, top: `${position.top}px` }"
     @click.stop
     @contextmenu.prevent
   >

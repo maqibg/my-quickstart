@@ -376,7 +376,11 @@ input {
 .menu {
   position: fixed;
   z-index: 50;
-  min-width: 180px;
+  display: inline-flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface-panel);
@@ -386,9 +390,10 @@ input {
 }
 
 .menu__item {
-  width: 100%;
+  width: auto;
+  min-width: 0;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 10px;
   border: 0;
   background: transparent;

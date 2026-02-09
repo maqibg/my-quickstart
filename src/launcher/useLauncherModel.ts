@@ -191,7 +191,7 @@ export function useLauncherModel() {
     if (saveTimer) window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
       saveTimer = null;
-      const plain = structuredClone(state) as LauncherState;
+      const plain = JSON.parse(JSON.stringify(state)) as LauncherState;
       saveState(plain).catch((e) => {
         if (saveErrorShown) return;
         saveErrorShown = true;

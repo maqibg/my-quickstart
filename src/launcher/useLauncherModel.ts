@@ -52,9 +52,26 @@ export function useLauncherModel() {
   const selectedAppIds = reactive(new Set<string>());
   let lastClickedAppId: string | null = null;
 
-  const activeGroup = computed<Group | undefined>(() =>
-    state.groups.find((g) => g.id === state.activeGroupId),
-  );
+  const invalidAppIds = reactive(new Set<string>());
+  const validating = ref(false);
+  const INVALID_GROUP_ID = "__invalid__";
+
+  const invalidGroup = computed<Group | undefined>(() => {
+    if (invalidAppIds.size === 0) return undefined;
+    const apps: AppEntry[] = [];
+    for (const group of state.groups) {
+      for (const app of group.apps) {
+        if (invalidAppIds.has(app.id)) apps.push(app);
+      }
+    }
+    if (apps.length === 0) return undefined;
+    return { id: INVALID_GROUP_ID, name: t("sidebar.invalidGroup", { count: apps.length }), apps };
+  });
+
+  const activeGroup = computed<Group | undefined>(() => {
+    if (state.activeGroupId === INVALID_GROUP_ID) return invalidGroup.value;
+    return state.groups.find((g) => g.id === state.activeGroupId);
+  });
 
   // Inverted search index for faster search
   const searchIndex = shallowRef(new Map<string, Set<string>>());
@@ -73,6 +90,37 @@ export function useLauncherModel() {
       }
     }
     searchIndex.value = index;
+  }
+
+  async function validateAll(): Promise<void> {
+    if (!tauriRuntime || validating.value) return;
+    validating.value = true;
+    showToast(t("validate.running"));
+    try {
+      const allApps: { id: string; path: string }[] = [];
+      for (const group of state.groups) {
+        for (const app of group.apps) {
+          allApps.push({ id: app.id, path: app.path });
+        }
+      }
+      const results = (await invoke("validate_paths", {
+        paths: allApps.map((a) => a.path),
+      })) as boolean[];
+      invalidAppIds.clear();
+      for (let i = 0; i < allApps.length; i++) {
+        if (!results[i]) invalidAppIds.add(allApps[i].id);
+      }
+      if (invalidAppIds.size > 0) {
+        showToast(t("validate.found", { count: invalidAppIds.size }));
+        state.activeGroupId = INVALID_GROUP_ID;
+      } else {
+        showToast(t("validate.allValid"));
+      }
+    } catch {
+      showToast(t("error.unknown"));
+    } finally {
+      validating.value = false;
+    }
   }
 
   // Build app lookup map for O(1) access
@@ -1111,5 +1159,9 @@ export function useLauncherModel() {
     onExternalDrop: externalPreview.onDrop,
     observeIcon: iconLoader.observe,
     unobserveIcon: iconLoader.unobserve,
+    invalidAppIds,
+    invalidGroup,
+    validateAll,
+    INVALID_GROUP_ID,
   };
 }

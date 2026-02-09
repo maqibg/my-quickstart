@@ -74,3 +74,21 @@ pub fn make_relative_path(path: String) -> Result<String, String> {
     Ok(rel.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+pub fn validate_paths(paths: Vec<String>) -> Vec<bool> {
+    paths
+        .iter()
+        .map(|p| {
+            let trimmed = p.trim();
+            if trimmed.is_empty() {
+                return false;
+            }
+            if is_special_path(trimmed) {
+                return true;
+            }
+            let resolved = resolve_launch_path(trimmed);
+            Path::new(&resolved).exists()
+        })
+        .collect()
+}
+

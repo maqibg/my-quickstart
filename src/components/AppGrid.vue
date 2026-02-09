@@ -10,11 +10,14 @@ type Props = {
   dropBeforeAppId?: string | null;
   dropEnd?: boolean;
   selectedIds?: Set<string>;
+  invalidIds?: Set<string>;
   observeIcon?: (el: HTMLElement, appId: string) => void;
   unobserveIcon?: (el: HTMLElement) => void;
 };
 
 const props = defineProps<Props>();
+
+const INVALID_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="8" fill="#3a3a3a"/><path d="M16 16l16 16M32 16L16 32" stroke="#ff4d4f" stroke-width="3" stroke-linecap="round"/></svg>')}`;
 
 const vLazyIcon = {
   mounted(el: HTMLElement, binding: any) {
@@ -160,8 +163,9 @@ function onDblClick(ev: MouseEvent): void {
         @dragover="(e) => emit('externalDragOverApp', e, item.id)"
         @drop.stop="(e) => emit('externalDrop', e)"
       >
-        <div class="card__icon" :class="{ 'card__icon--img': !!item.icon }" aria-hidden="true">
-          <img v-if="item.icon" class="card__iconImg" :src="item.icon" alt="" draggable="false" />
+        <div class="card__icon" :class="{ 'card__icon--img': !!item.icon || props.invalidIds?.has(item.id) }" aria-hidden="true">
+          <img v-if="props.invalidIds?.has(item.id)" class="card__iconImg" :src="INVALID_ICON" alt="" draggable="false" />
+          <img v-else-if="item.icon" class="card__iconImg" :src="item.icon" alt="" draggable="false" />
           <template v-else>{{ item.name.slice(0, 1).toUpperCase() }}</template>
         </div>
         <div class="card__name" :title="item.name">{{ item.name }}</div>
@@ -182,8 +186,9 @@ function onDblClick(ev: MouseEvent): void {
       aria-hidden="true"
     >
       <div class="card card--dragging dragGhost__card">
-        <div class="card__icon" :class="{ 'card__icon--img': !!ghost.app.icon }">
-          <img v-if="ghost.app.icon" class="card__iconImg" :src="ghost.app.icon" alt="" draggable="false" />
+        <div class="card__icon" :class="{ 'card__icon--img': !!ghost.app.icon || props.invalidIds?.has(ghost.app.id) }">
+          <img v-if="props.invalidIds?.has(ghost.app.id)" class="card__iconImg" :src="INVALID_ICON" alt="" draggable="false" />
+          <img v-else-if="ghost.app.icon" class="card__iconImg" :src="ghost.app.icon" alt="" draggable="false" />
           <template v-else>{{ ghost.app.name.slice(0, 1).toUpperCase() }}</template>
         </div>
         <div class="card__name">{{ ghost.app.name }}</div>

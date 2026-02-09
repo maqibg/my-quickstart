@@ -180,6 +180,7 @@ input {
   padding-top: 10px;
   display: flex;
   justify-content: flex-start;
+  gap: 16px;
 }
 
 .sidebar__settings {
@@ -236,6 +237,14 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.group__dot--invalid {
+  background: #ff4d4f !important;
+}
+
+.group--invalid .group__name {
+  color: #ff4d4f;
 }
 
 .main {

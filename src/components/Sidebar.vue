@@ -12,6 +12,7 @@ type Props = {
   groupDragOverId?: string | null;
   groupDragOverAfter?: boolean;
   groupDragOverBlankEnd?: boolean;
+  invalidGroup?: { id: string; name: string } | null;
 };
 
 defineProps<Props>();
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   (e: "contextmenuBlank", ev: MouseEvent): void;
   (e: "contextmenuGroup", ev: MouseEvent, id: string): void;
   (e: "openSettings"): void;
+  (e: "validate"): void;
   (e: "externalDragOverGroup", ev: DragEvent, id: string): void;
   (e: "externalDrop", ev: DragEvent): void;
   (e: "groupPointerDown", ev: PointerEvent, id: string): void;
@@ -75,6 +77,18 @@ function onGroupMouseDown(ev: MouseEvent, id: string): void {
         <span class="group__dot" />
         <span class="group__name" :title="g.name">{{ g.name }}</span>
       </button>
+
+      <button
+        v-if="invalidGroup"
+        class="group group--invalid"
+        :class="{ 'group--active': activeGroupId === invalidGroup.id }"
+        type="button"
+        @click="emit('selectGroup', invalidGroup.id)"
+        @contextmenu.stop
+      >
+        <span class="group__dot group__dot--invalid" />
+        <span class="group__name">{{ invalidGroup.name }}</span>
+      </button>
     </div>
 
     <div class="sidebar__footer">
@@ -85,6 +99,14 @@ function onGroupMouseDown(ev: MouseEvent, id: string): void {
         @contextmenu.stop
       >
         {{ t("sidebar.settings") }}
+      </button>
+      <button
+        class="sidebar__settings"
+        type="button"
+        @click="emit('validate')"
+        @contextmenu.stop
+      >
+        {{ t("sidebar.validate") }}
       </button>
     </div>
   </aside>

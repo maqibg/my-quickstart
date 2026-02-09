@@ -108,6 +108,12 @@ const en: Dictionary = {
   "error.alwaysOnTopFailed": "Always on top failed: {error}",
 
   "dialog.addApplicationTitle": "Add application",
+
+  "sidebar.validate": "Validate",
+  "validate.found": "Found {count} invalid item(s)",
+  "validate.allValid": "All items are valid",
+  "validate.running": "Validating...",
+  "sidebar.invalidGroup": "Invalid ({count})",
 };
 
 const zhCN: Dictionary = {
@@ -199,6 +205,12 @@ const zhCN: Dictionary = {
   "error.alwaysOnTopFailed": "置顶设置失败：{error}",
 
   "dialog.addApplicationTitle": "添加应用",
+
+  "sidebar.validate": "校验",
+  "validate.found": "发现 {count} 个失效项",
+  "validate.allValid": "所有项目均有效",
+  "validate.running": "校验中...",
+  "sidebar.invalidGroup": "无效 ({count})",
 };
 
 const dictionaries: Record<UiLanguage, Dictionary> = {

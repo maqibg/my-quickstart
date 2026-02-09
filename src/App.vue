@@ -91,6 +91,9 @@ const {
   groupDragOverBlankEnd,
   onGroupPointerDown,
   onGroupMouseDown,
+  invalidAppIds,
+  invalidGroup,
+  validateAll,
 } = useLauncherModel();
 
 function onSidebarBlank(ev: MouseEvent): void {
@@ -145,6 +148,7 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
         :group-drag-over-id="groupDragOverId"
         :group-drag-over-after="groupDragOverAfter"
         :group-drag-over-blank-end="groupDragOverBlankEnd"
+        :invalid-group="invalidGroup ? { id: invalidGroup.id, name: invalidGroup.name } : null"
         @select-group="setActiveGroup"
         @contextmenu-blank="onSidebarBlank"
         @contextmenu-group="onSidebarGroup"
@@ -153,6 +157,7 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
         @group-pointer-down="onSidebarGroupPointerDown"
         @group-mouse-down="onSidebarGroupMouseDown"
         @open-settings="openSettings"
+        @validate="validateAll"
       />
 
     <AppGrid
@@ -162,6 +167,7 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
       :drop-before-app-id="dropBeforeAppId"
       :drop-end="dropEnd"
       :selected-ids="selectedAppIds"
+      :invalid-ids="invalidAppIds"
       :observe-icon="observeIcon"
       :unobserve-icon="unobserveIcon"
         @launch="launch"

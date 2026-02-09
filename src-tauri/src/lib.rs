@@ -179,7 +179,8 @@ pub fn run() {
             paths::make_relative_path,
             open_app_folder,
             storage::load_launcher_state,
-            storage::save_launcher_state
+            storage::save_launcher_state,
+            paths::validate_paths
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

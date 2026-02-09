@@ -131,6 +131,9 @@ function coerceLauncherState(value: unknown): LauncherState | null {
   if (typeof rawSettings.enableGroupDragSort === "boolean") {
     settings.enableGroupDragSort = rawSettings.enableGroupDragSort;
   }
+  if (typeof rawSettings.autoStart === "boolean") {
+    settings.autoStart = rawSettings.autoStart;
+  }
 
   const activeGroupId =
     typeof raw.activeGroupId === "string" &&

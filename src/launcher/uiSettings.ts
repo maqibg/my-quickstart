@@ -77,6 +77,9 @@ export function applyLoadedUiSettings(target: UiSettings, loaded: UiSettings): v
 
   const maybeGroupDragSort = (loaded as any).enableGroupDragSort;
   if (typeof maybeGroupDragSort === "boolean") target.enableGroupDragSort = maybeGroupDragSort;
+
+  const maybeAutoStart = (loaded as any).autoStart;
+  if (typeof maybeAutoStart === "boolean") target.autoStart = maybeAutoStart;
 }
 
 export function computeAppStyle(settings: UiSettings): Record<string, string> {

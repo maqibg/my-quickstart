@@ -59,6 +59,8 @@ pub struct UiSettings {
         default = "default_enable_group_drag_sort"
     )]
     pub enable_group_drag_sort: bool,
+    #[serde(rename = "autoStart", default)]
+    pub auto_start: bool,
 }
 
 fn default_language() -> String {
@@ -131,6 +133,7 @@ impl Default for UiSettings {
             hide_on_startup: default_hide_on_startup(),
             use_relative_path: default_use_relative_path(),
             enable_group_drag_sort: default_enable_group_drag_sort(),
+            auto_start: false,
         }
     }
 }

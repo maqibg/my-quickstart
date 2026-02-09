@@ -409,6 +409,53 @@ input {
   color: rgba(255, 120, 120, 0.95);
 }
 
+.menu__separator {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border);
+}
+
+.menu__label {
+  padding: 2px 8px;
+  font-size: 0.8em;
+  opacity: 0.5;
+}
+
+.menu__sub {
+  position: relative;
+}
+
+.menu__arrow {
+  margin-left: auto;
+  padding-left: 12px;
+  opacity: 0.5;
+  font-size: 0.75em;
+}
+
+.menu__sub > .menu__item {
+  display: flex;
+  align-items: center;
+}
+
+.menu__sub-panel {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -6px;
+  min-width: 100px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-panel);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 60px var(--shadow-1);
+  padding: 6px;
+}
+
+.menu__sub:hover > .menu__sub-panel {
+  display: flex;
+  flex-direction: column;
+}
+
 .modal {
   position: fixed;
   inset: 0;

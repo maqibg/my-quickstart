@@ -20,6 +20,7 @@ type Props = {
   hideOnStartup: boolean;
   useRelativePath: boolean;
   enableGroupDragSort: boolean;
+  autoStart: boolean;
 };
 
 const props = defineProps<Props>();
@@ -41,6 +42,7 @@ const emit = defineEmits<{
   (e: "updateHideOnStartup", value: boolean): void;
   (e: "updateUseRelativePath", value: boolean): void;
   (e: "updateEnableGroupDragSort", value: boolean): void;
+  (e: "updateAutoStart", value: boolean): void;
 }>();
 
 const language = ref("en");
@@ -58,6 +60,7 @@ const alwaysOnTop = ref(true);
 const hideOnStartup = ref(false);
 const useRelativePath = ref(false);
 const enableGroupDragSort = ref(false);
+const autoStart = ref(false);
 const panelEl = ref<HTMLElement | null>(null);
 const panelX = ref(0);
 const panelY = ref(0);
@@ -168,6 +171,7 @@ watch(
     hideOnStartup.value = props.hideOnStartup;
     useRelativePath.value = props.useRelativePath;
     enableGroupDragSort.value = props.enableGroupDragSort;
+    autoStart.value = props.autoStart;
   },
   { immediate: true },
 );
@@ -266,6 +270,12 @@ function onEnableGroupDragSortChange(ev: Event): void {
   const next = (ev.target as HTMLInputElement).checked;
   enableGroupDragSort.value = next;
   emit("updateEnableGroupDragSort", next);
+}
+
+function onAutoStartChange(ev: Event): void {
+  const next = (ev.target as HTMLInputElement).checked;
+  autoStart.value = next;
+  emit("updateAutoStart", next);
 }
 
 function onApplyHotkey(): void {
@@ -481,6 +491,16 @@ function onApplyHotkey(): void {
             @change="onEnableGroupDragSortChange"
           />
           <span class="check__label">{{ t("settings.behavior.enableGroupDragSort") }}</span>
+        </label>
+
+        <label class="check">
+          <input
+            class="check__input"
+            type="checkbox"
+            :checked="autoStart"
+            @change="onAutoStartChange"
+          />
+          <span class="check__label">{{ t("settings.behavior.autoStart") }}</span>
         </label>
       </template>
 

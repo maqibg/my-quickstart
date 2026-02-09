@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { t } from "../launcher/i18n";
+import type { Group } from "../launcher/types";
 
 export type MenuKind = "blankMain" | "blankSidebar" | "app" | "group";
 
@@ -9,6 +10,8 @@ type Props = {
   kind: MenuKind;
   x: number;
   y: number;
+  groups?: Group[];
+  activeGroupId?: string;
 };
 
 const props = defineProps<Props>();
@@ -70,6 +73,7 @@ const emit = defineEmits<{
   (e: "openAppFolder"): void;
   (e: "editApp"): void;
   (e: "removeApp"): void;
+  (e: "moveToGroup", groupId: string): void;
   (e: "renameGroup"): void;
   (e: "removeGroup"): void;
   (e: "close"): void;
@@ -110,6 +114,25 @@ const emit = defineEmits<{
       <button class="menu__item" type="button" @click="emit('editApp')">
         {{ t("menu.edit") }}
       </button>
+      <div v-if="groups && groups.length > 1" class="menu__separator" />
+      <div v-if="groups && groups.length > 1" class="menu__sub">
+        <button class="menu__item" type="button">
+          {{ t("menu.moveTo") }}
+          <span class="menu__arrow">&#9656;</span>
+        </button>
+        <div class="menu__sub-panel">
+          <button
+            v-for="g in groups.filter((g) => g.id !== activeGroupId)"
+            :key="g.id"
+            class="menu__item"
+            type="button"
+            @click="emit('moveToGroup', g.id)"
+          >
+            {{ g.name }}
+          </button>
+        </div>
+      </div>
+      <div class="menu__separator" />
       <button class="menu__item menu__item--danger" type="button" @click="emit('removeApp')">
         {{ t("menu.remove") }}
       </button>

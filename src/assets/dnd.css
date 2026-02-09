@@ -8,6 +8,28 @@
   cursor: grabbing;
 }
 
+.card--selected {
+  border-color: rgba(86, 135, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(86, 135, 255, 0.3);
+  position: relative;
+}
+
+.card--selected::after {
+  content: "\2713";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(86, 135, 255, 0.85);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
 .cardPlaceholder {
   height: var(--card-height);
   border-radius: 14px;

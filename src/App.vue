@@ -7,6 +7,7 @@ import AppEditorModal from "./components/AppEditorModal.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import AddAppModal from "./components/AddAppModal.vue";
 import GroupRenameModal from "./components/GroupRenameModal.vue";
+import SelectionBar from "./components/SelectionBar.vue";
 import { useLauncherModel } from "./launcher/useLauncherModel";
 import { t } from "./launcher/i18n";
 
@@ -29,6 +30,11 @@ const {
   rename,
   setActiveGroup,
   launch,
+  selectedAppIds,
+  onAppClick,
+  clearSelection,
+  removeSelectedApps,
+  moveSelectedToGroup,
   openMenu,
   closeMenu,
   menuAddApp,
@@ -38,6 +44,7 @@ const {
   menuOpenAppFolder,
   menuEditApp,
   menuRemoveApp,
+  menuMoveToGroup,
   menuRenameGroup,
   menuRemoveGroup,
   onMouseDownApp,
@@ -74,6 +81,7 @@ const {
   updateHideOnStartup,
   updateUseRelativePath,
   updateEnableGroupDragSort,
+  updateAutoStart,
   applyToggleHotkey,
   onMainBlankDoubleClick,
   draggingGroupId,
@@ -153,9 +161,11 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
       :dragging-app-id="draggingAppId"
       :drop-before-app-id="dropBeforeAppId"
       :drop-end="dropEnd"
+      :selected-ids="selectedAppIds"
       :observe-icon="observeIcon"
       :unobserve-icon="unobserveIcon"
         @launch="launch"
+        @app-click="onAppClick"
         @contextmenu-blank="onGridBlank"
         @contextmenu-app="onGridApp"
         @dblclick-blank="onGridBlankDblClick"
@@ -168,18 +178,30 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
 
     <div v-if="toast" class="toast" role="status">{{ toast }}</div>
 
+    <SelectionBar
+      :count="selectedAppIds.size"
+      :groups="state.groups"
+      :active-group-id="state.activeGroupId"
+      @delete="removeSelectedApps"
+      @move-to="moveSelectedToGroup"
+      @cancel="clearSelection"
+    />
+
     <ContextMenu
       :open="menu.open"
       :kind="menu.kind"
       :x="menu.x"
       :y="menu.y"
+      :groups="state.groups"
+      :active-group-id="state.activeGroupId"
       @add-app="menuAddApp"
-    @add-uwp-app="menuAddUwpApp"
-    @add-group="menuAddGroup"
-    @open-app="menuOpenApp"
-    @open-app-folder="menuOpenAppFolder"
-    @edit-app="menuEditApp"
+      @add-uwp-app="menuAddUwpApp"
+      @add-group="menuAddGroup"
+      @open-app="menuOpenApp"
+      @open-app-folder="menuOpenAppFolder"
+      @edit-app="menuEditApp"
       @remove-app="menuRemoveApp"
+      @move-to-group="menuMoveToGroup"
       @rename-group="menuRenameGroup"
       @remove-group="menuRemoveGroup"
       @close="closeMenu"
@@ -218,6 +240,7 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
       :hide-on-startup="state.settings.hideOnStartup"
       :use-relative-path="state.settings.useRelativePath"
       :enable-group-drag-sort="state.settings.enableGroupDragSort"
+      :auto-start="state.settings.autoStart"
       @close="closeSettings"
       @update-card-width="updateCardWidth"
       @update-card-height="updateCardHeight"
@@ -233,6 +256,7 @@ function onSidebarGroupMouseDown(ev: MouseEvent, id: string): void {
       @update-hide-on-startup="updateHideOnStartup"
       @update-use-relative-path="updateUseRelativePath"
       @update-enable-group-drag-sort="updateEnableGroupDragSort"
+      @update-auto-start="updateAutoStart"
       @apply-hotkey="applyToggleHotkey"
     />
 

@@ -49,6 +49,9 @@ export function useLauncherModel() {
   let saveErrorShown = false;
   let suppressGroupClickUntil = 0;
 
+  const selectedAppIds = reactive(new Set<string>());
+  let lastClickedAppId: string | null = null;
+
   const activeGroup = computed<Group | undefined>(() =>
     state.groups.find((g) => g.id === state.activeGroupId),
   );
@@ -102,6 +105,8 @@ export function useLauncherModel() {
     return matches;
   });
   const isSearching = computed(() => search.value.trim().length > 0);
+
+  watch(isSearching, () => clearSelection());
 
   const appStyle = computed<Record<string, string>>(() => {
     return computeAppStyle(state.settings);
@@ -194,6 +199,44 @@ export function useLauncherModel() {
     if (internalDrag.shouldSuppressClick()) return;
     if (Date.now() < suppressGroupClickUntil) return;
     state.activeGroupId = id;
+    clearSelection();
+  }
+
+  function clearSelection(): void {
+    selectedAppIds.clear();
+    lastClickedAppId = null;
+  }
+
+  function onAppClick(ev: MouseEvent, app: AppEntry): void {
+    if (internalDrag.shouldSuppressClick()) return;
+
+    if (ev.ctrlKey || ev.metaKey) {
+      if (selectedAppIds.has(app.id)) {
+        selectedAppIds.delete(app.id);
+      } else {
+        selectedAppIds.add(app.id);
+      }
+      lastClickedAppId = app.id;
+      return;
+    }
+
+    if (ev.shiftKey) {
+      const apps = filteredApps.value;
+      const lastIdx = lastClickedAppId ? apps.findIndex((a) => a.id === lastClickedAppId) : 0;
+      const curIdx = apps.findIndex((a) => a.id === app.id);
+      if (curIdx >= 0) {
+        const from = Math.min(Math.max(lastIdx, 0), curIdx);
+        const to = Math.max(Math.max(lastIdx, 0), curIdx);
+        for (let i = from; i <= to; i++) {
+          selectedAppIds.add(apps[i]!.id);
+        }
+      }
+      return;
+    }
+
+    clearSelection();
+    lastClickedAppId = app.id;
+    launch(app);
   }
 
   function addGroup(name?: string): void {
@@ -451,6 +494,17 @@ export function useLauncherModel() {
   function menuRemoveGroup(): void {
     const group = getMenuGroup();
     if (group) removeGroup(group);
+    closeMenu();
+  }
+
+  function menuMoveToGroup(targetGroupId: string): void {
+    const found = findAppById(menu.targetId);
+    if (!found) { closeMenu(); return; }
+    const target = state.groups.find((g) => g.id === targetGroupId);
+    if (!target) { closeMenu(); return; }
+    found.group.apps = found.group.apps.filter((a) => a.id !== found.app.id);
+    target.apps.push(found.app);
+    scheduleSave();
     closeMenu();
   }
 
@@ -728,6 +782,28 @@ export function useLauncherModel() {
     scheduleSave();
   }
 
+  function removeSelectedApps(): void {
+    if (selectedAppIds.size === 0) return;
+    for (const group of state.groups) {
+      group.apps = group.apps.filter((a) => !selectedAppIds.has(a.id));
+    }
+    clearSelection();
+    scheduleSave();
+  }
+
+  function moveSelectedToGroup(targetGroupId: string): void {
+    if (selectedAppIds.size === 0) return;
+    const target = state.groups.find((g) => g.id === targetGroupId);
+    if (!target) return;
+    for (const group of state.groups) {
+      const moving = group.apps.filter((a) => selectedAppIds.has(a.id));
+      group.apps = group.apps.filter((a) => !selectedAppIds.has(a.id));
+      target.apps.push(...moving);
+    }
+    clearSelection();
+    scheduleSave();
+  }
+
   const { editor, openEditor, closeEditor, applyEditorUpdate } =
     createAppEditorModel({
       getGroupByEntryId: (entryId) => findAppById(entryId)?.group,
@@ -800,6 +876,17 @@ export function useLauncherModel() {
     scheduleSave();
   }
 
+  async function updateAutoStart(value: boolean): Promise<void> {
+    state.settings.autoStart = value;
+    try {
+      const { enable, disable } = await import("@tauri-apps/plugin-autostart");
+      if (value) await enable(); else await disable();
+    } catch (e) {
+      console.error("autostart failed", e);
+    }
+    scheduleSave();
+  }
+
   function updateHideOnStartup(value: boolean): void {
     state.settings.hideOnStartup = value;
     scheduleSave();
@@ -820,13 +907,20 @@ export function useLauncherModel() {
   function shouldAllowEditShortcut(ev: KeyboardEvent): boolean {
     if (!(ev.ctrlKey || ev.metaKey) || ev.altKey) return false;
     const key = ev.key.toLowerCase();
-    return key === "a" || key === "c" || key === "v" || key === "x" || key === "z" || key === "y";
+    return key === "c" || key === "v" || key === "x" || key === "z" || key === "y";
   }
 
   function onGlobalKeydown(ev: KeyboardEvent): void {
     if (shouldAllowEditShortcut(ev)) return;
     if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
       const key = ev.key.toLowerCase();
+      if (key === "a") {
+        if (isEditableTarget(ev.target)) return;
+        ev.preventDefault();
+        const apps = filteredApps.value;
+        for (const app of apps) selectedAppIds.add(app.id);
+        return;
+      }
       if (key === "f") return;
       if (key === "r" || key === "l" || key === "w" || key === "n" || key === "t") {
         ev.preventDefault();
@@ -840,6 +934,16 @@ export function useLauncherModel() {
         ev.preventDefault();
         return;
       }
+    }
+    if (ev.key === "Escape" && selectedAppIds.size > 0) {
+      clearSelection();
+      ev.preventDefault();
+      return;
+    }
+    if (ev.key === "Delete" && !isEditableTarget(ev.target) && selectedAppIds.size > 0) {
+      removeSelectedApps();
+      ev.preventDefault();
+      return;
     }
     if (ev.key === "F5" || ev.key === "F12") {
       ev.preventDefault();
@@ -934,6 +1038,9 @@ export function useLauncherModel() {
 
     hydrateEntryIcons(activeGroup.value?.apps ?? []);
     void setAlwaysOnTop(state.settings.alwaysOnTop);
+    if (state.settings.autoStart) {
+      import("@tauri-apps/plugin-autostart").then(({ enable }) => enable()).catch(() => {});
+    }
 
     if (!isTauriRuntime()) return;
     unlistenFns = await installTauriFileDropListeners({
@@ -980,15 +1087,16 @@ export function useLauncherModel() {
     tauriRuntime, state, search, toast,
     settingsOpen, addAppOpen, appStyle, filteredApps, isSearching,
     menu, editor, rename, setActiveGroup, launch,
+    selectedAppIds, onAppClick, clearSelection, removeSelectedApps, moveSelectedToGroup,
     openMenu, closeMenu, menuAddApp, menuAddUwpApp, menuAddGroup,
-    menuOpenApp, menuOpenAppFolder, menuEditApp, menuRemoveApp, menuRenameGroup, menuRemoveGroup,
+    menuOpenApp, menuOpenAppFolder, menuEditApp, menuRemoveApp, menuMoveToGroup, menuRenameGroup, menuRemoveGroup,
     pickAndAddApps, openAddApp, closeAddApp, addUwpToActiveGroup,
     addGroup, removeGroup,
     minimizeWindow, toggleMaximizeWindow, closeWindow, startWindowDragging,
     closeEditor, applyEditorUpdate, openSettings, closeSettings,
     updateCardWidth, updateCardHeight, updateSidebarWidth, updateFontFamily, updateFontSize,
     updateCardFontSize, updateCardIconScale, updateTheme, updateDblClickBlankToHide,
-    updateLanguage, updateAlwaysOnTop, updateHideOnStartup, updateUseRelativePath, updateEnableGroupDragSort,
+    updateLanguage, updateAlwaysOnTop, updateHideOnStartup, updateUseRelativePath, updateEnableGroupDragSort, updateAutoStart,
     applyToggleHotkey, onMainBlankDoubleClick,
     openRenameGroup: openRename, closeRenameGroup: closeRename, saveRenameGroup: saveRename,
     draggingAppId, dropBeforeAppId, dropEnd, dropTargetGroupId, draggingGroupId, groupDragReadyId, groupDragOverId,

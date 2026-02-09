@@ -9,6 +9,7 @@ type Props = {
   draggingAppId?: string | null;
   dropBeforeAppId?: string | null;
   dropEnd?: boolean;
+  selectedIds?: Set<string>;
   observeIcon?: (el: HTMLElement, appId: string) => void;
   unobserveIcon?: (el: HTMLElement) => void;
 };
@@ -26,6 +27,7 @@ const vLazyIcon = {
 
 const emit = defineEmits<{
   (e: "launch", entry: AppEntry): void;
+  (e: "appClick", ev: MouseEvent, entry: AppEntry): void;
   (e: "contextmenuBlank", ev: MouseEvent): void;
   (e: "contextmenuApp", ev: MouseEvent, id: string): void;
   (e: "dblclickBlank"): void;
@@ -145,11 +147,12 @@ function onDblClick(ev: MouseEvent): void {
         :class="{
           'card--dropBefore': !!props.dropBeforeAppId && item.id === props.dropBeforeAppId,
           'card--sourceDragging': !!props.draggingAppId && item.id === props.draggingAppId,
+          'card--selected': !!props.selectedIds?.has(item.id),
         }"
         role="button"
         tabindex="0"
         :data-app-id="item.id"
-        @click="emit('launch', item)"
+        @click="(e) => emit('appClick', e, item)"
         @keydown.enter.prevent="emit('launch', item)"
         @keydown.space.prevent="emit('launch', item)"
         @contextmenu.stop="(e) => emit('contextmenuApp', e, item.id)"

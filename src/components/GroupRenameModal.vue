@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { t } from "../launcher/i18n";
 
 type Props = {
@@ -29,13 +29,16 @@ watch(
   { immediate: true },
 );
 
+const canSave = computed(() => name.value.trim() !== "");
+
 function onSave(): void {
+  if (!canSave.value) return;
   emit("save", name.value);
 }
 
 function onKeydown(ev: KeyboardEvent): void {
   if (ev.key === "Enter") {
-    onSave();
+    if (canSave.value) onSave();
   } else if (ev.key === "Escape") {
     emit("close");
   }
@@ -57,7 +60,7 @@ function onKeydown(ev: KeyboardEvent): void {
       </label>
       <div class="modal__actions">
         <button class="btn" type="button" @click="emit('close')">{{ t("common.cancel") }}</button>
-        <button class="btn btn--primary" type="button" @click="onSave">{{ t("common.save") }}</button>
+        <button class="btn btn--primary" type="button" :disabled="!canSave" @click="onSave">{{ t("common.save") }}</button>
       </div>
     </div>
   </div>

@@ -231,6 +231,10 @@ fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {
         .map_err(|e| e.to_string())?;
     conn.pragma_update(None, "foreign_keys", "ON")
         .map_err(|e| e.to_string())?;
+    conn.pragma_update(None, "cache_size", "-8000")
+        .map_err(|e| e.to_string())?;
+    conn.pragma_update(None, "temp_store", "2")
+        .map_err(|e| e.to_string())?;
     conn.execute_batch(
         r#"
 CREATE TABLE IF NOT EXISTS meta (
@@ -435,8 +439,8 @@ pub fn save_launcher_state(app: tauri::AppHandle, state: LauncherState) -> Resul
                     group.id,
                     app_entry.name,
                     app_entry.path,
-                    app_entry.args.clone().unwrap_or_default(),
-                    app_entry.icon.clone().unwrap_or_default(),
+                    app_entry.args.as_deref().unwrap_or(""),
+                    app_entry.icon.as_deref().unwrap_or(""),
                     app_pos as i64,
                     app_entry.added_at
                 ],

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { t } from "../launcher/i18n";
 import type { Group } from "../launcher/types";
 
@@ -65,6 +65,10 @@ onUnmounted(() => {
   window.removeEventListener("resize", onResize);
 });
 
+const moveTargetGroups = computed(() =>
+  (props.groups ?? []).filter((g) => g.id !== props.activeGroupId)
+);
+
 const emit = defineEmits<{
   (e: "addApp"): void;
   (e: "addUwpApp"): void;
@@ -122,7 +126,7 @@ const emit = defineEmits<{
         </button>
         <div class="menu__sub-panel">
           <button
-            v-for="g in groups.filter((g) => g.id !== activeGroupId)"
+            v-for="g in moveTargetGroups"
             :key="g.id"
             class="menu__item"
             type="button"

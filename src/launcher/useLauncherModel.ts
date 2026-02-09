@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { createWindowControls } from "./windowControls";
 
@@ -57,7 +57,9 @@ export function useLauncherModel() {
   );
 
   // Inverted search index for faster search
-  const searchIndex = computed(() => {
+  const searchIndex = shallowRef(new Map<string, Set<string>>());
+
+  function rebuildSearchIndex(): void {
     const index = new Map<string, Set<string>>();
     for (const group of state.groups) {
       for (const app of group.apps) {
@@ -70,8 +72,8 @@ export function useLauncherModel() {
         }
       }
     }
-    return index;
-  });
+    searchIndex.value = index;
+  }
 
   // Build app lookup map for O(1) access
   const appById = computed(() => {
@@ -118,6 +120,7 @@ export function useLauncherModel() {
     state.groups.splice(0, state.groups.length, ...loaded.groups);
     applyLoadedUiSettings(state.settings, loaded.settings);
     setUiLanguage(state.settings.language);
+    rebuildSearchIndex();
   }
 
   function showToast(message: string): void {
@@ -140,23 +143,15 @@ export function useLauncherModel() {
     if (saveTimer) window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
       saveTimer = null;
-      try {
-        const plain = JSON.parse(JSON.stringify(state)) as LauncherState;
-        saveState(plain).catch((e) => {
-          if (saveErrorShown) return;
-          saveErrorShown = true;
-          showToast(t("error.saveFailed", { error: e instanceof Error ? e.message : String(e) }));
-        });
-      } catch (e) {
+      const plain = structuredClone(state) as LauncherState;
+      saveState(plain).catch((e) => {
         if (saveErrorShown) return;
         saveErrorShown = true;
         showToast(t("error.saveFailed", { error: e instanceof Error ? e.message : String(e) }));
-      }
+      });
     }, 500);
   }
 
-  watch(() => state.groups, scheduleSave, { deep: true });
-  watch(() => state.settings, scheduleSave, { deep: true });
   watch(() => state.activeGroupId, scheduleSave);
   watch(
     () => state.settings.language,
@@ -178,6 +173,7 @@ export function useLauncherModel() {
       await hydrateEntryIcons(entries);
     },
     scheduleSave,
+    onStructureChanged: rebuildSearchIndex,
     transformPaths: async (paths) => {
       if (!tauriRuntime || !state.settings.useRelativePath) return paths;
       const mapped = await Promise.all(
@@ -261,6 +257,7 @@ export function useLauncherModel() {
     if (state.activeGroupId === group.id) {
       state.activeGroupId = state.groups[0]?.id ?? state.activeGroupId;
     }
+    rebuildSearchIndex();
     scheduleSave();
   }
 
@@ -779,6 +776,7 @@ export function useLauncherModel() {
     if (!match) return;
     const idx = match.group.apps.findIndex((a) => a.id === entry.id);
     if (idx >= 0) match.group.apps.splice(idx, 1);
+    rebuildSearchIndex();
     scheduleSave();
   }
 
@@ -788,6 +786,7 @@ export function useLauncherModel() {
       group.apps = group.apps.filter((a) => !selectedAppIds.has(a.id));
     }
     clearSelection();
+    rebuildSearchIndex();
     scheduleSave();
   }
 
@@ -801,6 +800,7 @@ export function useLauncherModel() {
       target.apps.push(...moving);
     }
     clearSelection();
+    rebuildSearchIndex();
     scheduleSave();
   }
 
@@ -809,6 +809,7 @@ export function useLauncherModel() {
       getGroupByEntryId: (entryId) => findAppById(entryId)?.group,
       hydrateEntryIcons,
       scheduleSave,
+      onStructureChanged: rebuildSearchIndex,
     });
 
   function openSettings(): void {
@@ -1051,6 +1052,7 @@ export function useLauncherModel() {
       hydrateEntryIcons,
       scheduleSave,
       showToast,
+      onStructureChanged: rebuildSearchIndex,
       transformPaths: async (paths) => {
         if (!state.settings.useRelativePath) return paths;
         const mapped = await Promise.all(

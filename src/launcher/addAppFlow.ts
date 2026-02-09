@@ -18,6 +18,7 @@ export function createAddAppFlow(opts: {
   showToast: (message: string) => void;
   hydrateEntryIcons: (entries: AppEntry[]) => Promise<void>;
   scheduleSave: () => void;
+  onStructureChanged?: () => void;
   transformPaths?: (paths: string[]) => Promise<string[]>;
 }) {
   const open = ref(false);
@@ -38,6 +39,7 @@ export function createAddAppFlow(opts: {
     if (added.length > 0) {
       opts.showToast(t("toast.addedItems", { count: added.length }));
       opts.hydrateEntryIcons(added);
+      opts.onStructureChanged?.();
       opts.scheduleSave();
     }
   }
@@ -77,6 +79,7 @@ export function createAddAppFlow(opts: {
     const added = group.apps.find((x) => x.id === entry.id);
     if (added) opts.hydrateEntryIcons([added]);
     opts.showToast(t("toast.addedItems", { count: 1 }));
+    opts.onStructureChanged?.();
     opts.scheduleSave();
   }
 

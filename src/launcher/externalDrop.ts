@@ -1,5 +1,5 @@
 import type { Group } from "./types";
-import { addAppsToGroupAt, normalizeDroppedPaths } from "./utils";
+import { addAppsToGroup, normalizeDroppedPaths } from "./utils";
 
 export type ExternalDropTarget = {
   paths: string[];
@@ -48,13 +48,13 @@ export function applyExternalDropToGroups(options: {
   groups: Group[];
   activeGroup: Group | undefined;
   payload: unknown;
-}): { group: Group; added: ReturnType<typeof addAppsToGroupAt> } | null {
+}): { group: Group; added: ReturnType<typeof addAppsToGroup> } | null {
   const target = computeExternalDropTarget(options.payload, options.activeGroup);
   if (!target) return null;
   const group =
     options.groups.find((g) => g.id === target.groupId) ?? options.activeGroup;
   if (!group) return null;
   const idx = typeof target.index === "number" ? target.index : group.apps.length;
-  const added = addAppsToGroupAt(group, target.paths, idx);
+  const added = addAppsToGroup(group, target.paths, idx);
   return { group, added };
 }

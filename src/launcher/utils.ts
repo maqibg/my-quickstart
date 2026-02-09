@@ -66,7 +66,7 @@ export function normalizeDroppedPaths(payload: unknown): string[] {
   return [];
 }
 
-export function addAppsToGroup(group: Group, filePaths: string[]): AppEntry[] {
+export function addAppsToGroup(group: Group, filePaths: string[], insertAt?: number): AppEntry[] {
   const existing = new Set(group.apps.map((a) => a.path));
   const now = Date.now();
   const toAdd: AppEntry[] = [];
@@ -83,30 +83,12 @@ export function addAppsToGroup(group: Group, filePaths: string[]): AppEntry[] {
     existing.add(p);
   }
   if (toAdd.length === 0) return [];
-  group.apps.unshift(...toAdd);
-  const ids = new Set(toAdd.map((a) => a.id));
-  return group.apps.filter((a) => ids.has(a.id));
-}
-
-export function addAppsToGroupAt(group: Group, filePaths: string[], insertAt: number): AppEntry[] {
-  const existing = new Set(group.apps.map((a) => a.path));
-  const now = Date.now();
-  const toAdd: AppEntry[] = [];
-  for (const p of filePaths) {
-    if (!p || existing.has(p)) continue;
-    toAdd.push({
-      id: createId(),
-      name: suggestAppName(p),
-      path: p,
-      args: "",
-      icon: undefined,
-      addedAt: now,
-    });
-    existing.add(p);
+  if (insertAt === undefined) {
+    group.apps.unshift(...toAdd);
+  } else {
+    const idx = Math.max(0, Math.min(group.apps.length, Math.floor(insertAt)));
+    group.apps.splice(idx, 0, ...toAdd);
   }
-  if (toAdd.length === 0) return [];
-  const idx = Math.max(0, Math.min(group.apps.length, Math.floor(insertAt)));
-  group.apps.splice(idx, 0, ...toAdd);
   const ids = new Set(toAdd.map((a) => a.id));
   return group.apps.filter((a) => ids.has(a.id));
 }

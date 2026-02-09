@@ -5,6 +5,8 @@ import { t } from "../launcher/i18n";
 
 type UwpAppInfo = { name: string; appId: string };
 
+let uwpCache: UwpAppInfo[] | null = null;
+
 type Props = {
   open: boolean;
   tauriRuntime: boolean;
@@ -40,9 +42,15 @@ watch(
       return;
     }
     loading.value = true;
+    if (uwpCache) {
+      apps.value = uwpCache;
+      loading.value = false;
+      return;
+    }
     try {
       const list = (await invoke("list_uwp_apps")) as unknown;
       apps.value = Array.isArray(list) ? (list as UwpAppInfo[]) : [];
+      uwpCache = apps.value;
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e);
       apps.value = [];

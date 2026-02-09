@@ -13,7 +13,7 @@ struct CacheEntry {
     created_at: Instant,
 }
 
-const NEGATIVE_CACHE_TTL_SECS: u64 = 60;
+const NEGATIVE_CACHE_TTL_SECS: u64 = 300;
 
 static ICON_CACHE: OnceLock<Mutex<HashMap<IconKey, CacheEntry>>> = OnceLock::new();
 
@@ -57,6 +57,9 @@ fn disk_put(app: &tauri::AppHandle, key: &IconKey, data: &str) {
     if let Ok(cache_dir) = get_cache_dir(app) {
         let hash = hash_key(key);
         let file_path = cache_dir.join(format!("{}.png", hash));
+        if file_path.exists() {
+            return;
+        }
 
         if let Some(base64_part) = data.strip_prefix("data:image/png;base64,") {
             use base64::Engine;

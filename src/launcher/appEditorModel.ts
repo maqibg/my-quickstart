@@ -13,6 +13,7 @@ export function createAppEditorModel(opts: {
   getGroupByEntryId: (entryId: string) => Group | undefined;
   hydrateEntryIcons: (entries: AppEntry[]) => Promise<void> | void;
   scheduleSave: () => void;
+  onStructureChanged?: () => void;
 }) {
   const editor = reactive<EditorState>({
     open: false,
@@ -52,6 +53,7 @@ export function createAppEditorModel(opts: {
     }
     entry.args = editor.args;
     closeEditor();
+    opts.onStructureChanged?.();
     opts.scheduleSave();
   }
 

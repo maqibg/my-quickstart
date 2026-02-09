@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { Group } from "../launcher/types";
 import { t } from "../launcher/i18n";
 
@@ -8,7 +9,11 @@ type Props = {
   activeGroupId: string;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+const moveTargetGroups = computed(() =>
+  props.groups.filter((g) => g.id !== props.activeGroupId)
+);
 
 const emit = defineEmits<{
   (e: "delete"): void;
@@ -26,7 +31,7 @@ const emit = defineEmits<{
     <span class="selectionBar__divider" />
     <span class="selectionBar__label">{{ t("menu.moveTo") }}</span>
     <button
-      v-for="g in groups.filter((g) => g.id !== activeGroupId)"
+      v-for="g in moveTargetGroups"
       :key="g.id"
       class="selectionBar__btn"
       type="button"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { t } from "../launcher/i18n";
 
 type Props = {
@@ -31,7 +31,10 @@ watch(
   { immediate: true },
 );
 
+const canSave = computed(() => name.value.trim() !== "" && path.value.trim() !== "");
+
 function onSave(): void {
+  if (!canSave.value) return;
   emit("save", {
     name: name.value,
     path: path.value,
@@ -58,7 +61,7 @@ function onSave(): void {
       </label>
       <div class="modal__actions">
         <button class="btn" type="button" @click="emit('close')">{{ t("common.cancel") }}</button>
-        <button class="btn btn--primary" type="button" @click="onSave">{{ t("common.save") }}</button>
+        <button class="btn btn--primary" type="button" :disabled="!canSave" @click="onSave">{{ t("common.save") }}</button>
       </div>
     </div>
   </div>

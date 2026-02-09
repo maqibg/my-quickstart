@@ -3,7 +3,7 @@ import type { AppEntry, Group } from "./types";
 import { computeExternalDropTarget } from "./externalDrop";
 import { type PendingExternalTarget } from "./externalFileDropPreview";
 import { t } from "./i18n";
-import { addAppsToGroupAt, normalizeDroppedPaths } from "./utils";
+import { addAppsToGroup, normalizeDroppedPaths } from "./utils";
 
 export async function installTauriFileDropListeners(opts: {
   groups: Group[];
@@ -13,27 +13,36 @@ export async function installTauriFileDropListeners(opts: {
   hydrateEntryIcons: (entries: AppEntry[]) => Promise<void>;
   scheduleSave: () => void;
   showToast: (message: string) => void;
+  onStructureChanged?: () => void;
   transformPaths?: (paths: string[]) => Promise<string[]>;
 }): Promise<UnlistenFn[]> {
+  let isProcessing = false;
   const drop = async (payload: unknown) => {
     opts.clearPreview();
+    if (isProcessing) return;
     const active = opts.getActiveGroup();
     const paths = normalizeDroppedPaths(payload);
     if (!active || paths.length === 0) return;
 
-    const pending = opts.consumePending();
-    const fallback = pending ? null : computeExternalDropTarget(payload, active);
-    const groupId = pending?.groupId ?? fallback?.groupId ?? active.id;
-    const group = opts.groups.find((g) => g.id === groupId) ?? active;
-    const idxBase =
-      pending?.index ??
-      (typeof fallback?.index === "number" ? fallback.index : group.apps.length);
-    const normalized = opts.transformPaths ? await opts.transformPaths(paths) : paths;
-    const added = addAppsToGroupAt(group, normalized, idxBase);
-    if (added.length > 0) {
-      opts.showToast(t("toast.addedItems", { count: added.length }));
-      await opts.hydrateEntryIcons(added);
-      opts.scheduleSave();
+    isProcessing = true;
+    try {
+      const pending = opts.consumePending();
+      const fallback = pending ? null : computeExternalDropTarget(payload, active);
+      const groupId = pending?.groupId ?? fallback?.groupId ?? active.id;
+      const group = opts.groups.find((g) => g.id === groupId) ?? active;
+      const idxBase =
+        pending?.index ??
+        (typeof fallback?.index === "number" ? fallback.index : group.apps.length);
+      const normalized = opts.transformPaths ? await opts.transformPaths(paths) : paths;
+      const added = addAppsToGroup(group, normalized, idxBase);
+      if (added.length > 0) {
+        opts.showToast(t("toast.addedItems", { count: added.length }));
+        opts.onStructureChanged?.();
+        await opts.hydrateEntryIcons(added);
+        opts.scheduleSave();
+      }
+    } finally {
+      isProcessing = false;
     }
   };
 

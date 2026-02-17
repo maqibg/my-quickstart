@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "my-quickstart",
-  "version": "0.1.0",
-  "identifier": "com.cat.tauri-app",
+  "productName": "Quick Launcher",
+  "version": "0.1.5",
+  "identifier": "com.cat.quick-launcher",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",

@@ -134,7 +134,19 @@ fn set_toggle_hotkey(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(
+        |app, _args, _cwd| {
+            window_utils::show_main_window(app);
+        },
+    ));
+
+    #[cfg(not(desktop))]
+    let builder = builder;
+
+    builder
         .setup(|app| {
             #[cfg(desktop)]
             {

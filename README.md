@@ -1,4 +1,4 @@
-# my-quickstart
+# Quick Launcher
 
 [中文说明](README_CN.md)
 
@@ -28,7 +28,7 @@ A lightweight Windows launcher built with Tauri + Vue 3 + SQLite.
 
 ## Data Storage
 
-- SQLite database: `%LOCALAPPDATA%\my-quickstart\launcher.db`
+- SQLite database: `<app-dir>/data/launcher.db`
 
 ## Screenshots
 

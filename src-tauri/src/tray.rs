@@ -12,8 +12,8 @@ const MENU_EXIT: &str = "tray_exit";
 pub struct TrayState(pub tauri::tray::TrayIcon<Wry>);
 
 pub fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, MENU_SHOW, "Show", true, None::<String>)?;
-    let exit = MenuItem::with_id(app, MENU_EXIT, "Exit", true, None::<String>)?;
+    let show = MenuItem::with_id(app, MENU_SHOW, "显示主窗口", true, None::<String>)?;
+    let exit = MenuItem::with_id(app, MENU_EXIT, "退出", true, None::<String>)?;
     let menu = MenuBuilder::new(app).items(&[&show, &exit]).build()?;
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)

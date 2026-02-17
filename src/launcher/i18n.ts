@@ -20,7 +20,7 @@ export const uiLanguage = ref<UiLanguage>(guessSystemLanguage());
 type Dictionary = Record<string, string>;
 
 const en: Dictionary = {
-  "app.title": "Quick Launcher",
+  "app.title": "Quick-Launcher",
 
   "topbar.searchPlaceholder": "Search...",
   "window.minimize": "Minimize",

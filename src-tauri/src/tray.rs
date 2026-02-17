@@ -18,7 +18,7 @@ pub fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
-        .tooltip("Quick Launcher")
+        .tooltip("Quick-Launcher")
         .show_menu_on_left_click(false);
     if let Some(icon) = app.default_window_icon() {
         builder = builder.icon(icon.clone());
